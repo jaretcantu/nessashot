@@ -75,8 +75,16 @@ Stats.prototype.add = function(addend) {
 	}
 }
 
-function Passive() {
+function Passive(proc, func) {
 	if (arguments.length == 0) return;
+	this.condition = proc;
+	this.func = func;
+}
+Passive.DUMMY = new Passive(0, null); // never procs
+Passive.INIT = 1;
+Passive.prototype.proc = function(type, poke, item, foe) {
+	if (type == this.condition)
+		this.func(poke, item, foe);
 }
 
 function StatPassive(proc, statf) {
@@ -87,13 +95,11 @@ function StatPassive(proc, statf) {
 StatPassive.prototype = new Passive();
 StatPassive.prototype.constructor = StatPassive;
 StatPassive.addStats = function(poke, item, foe) {
-	var stat = this.statFunc(poke, item, foe);
-	for (var s in stat)
-		poke.stat[s]+= stat[s];
+	poke.stats.add(this.statFunc(poke, item, foe));
 }
 
 function ScoreScalingPassive(stat) {
-	StatPassive.call(this, Passive.INIT, ScoreScalingPassive.multiplier);
+	StatPassive.call(this, Passive.INIT, this.multiplier);
 	this.stat = stat;
 }
 ScoreScalingPassive.prototype = new StatPassive();
@@ -104,7 +110,7 @@ ScoreScalingPassive.prototype.multiplier = function(poke, item, foe) {
 
 function PercentItemPassive(stat) {
 	/* XXX This may have to be either a LATE_INIT or EARLY_INIT */
-	StatPassive.call(this, Passive.INIT, PercentItemPassive.multiplier);
+	StatPassive.call(this, Passive.INIT, this.multiplier);
 	this.stat = stat;
 }
 PercentItemPassive.prototype = new StatPassive();
@@ -255,6 +261,7 @@ function Item(name, prog, unlocks, passive) {
 	this.progression = prog;
 	this.unlocks = unlocks;
 	this.hints = 0;
+	this.passive = passive;
 	// Just check the highest level for any crit modification
 	if (isDefined(prog[prog.length-1].critrate))
 		this.hints|= HINT_CRIT;
@@ -293,7 +300,7 @@ Item.LIST = {
 			new Stats(),
 			new Stats(),
 			new Stats(),
-		], [0, 0, 0], null),
+		], [0, 0, 0], Passive.DUMMY),
 	// Item values from https://gamewith.net/pokemon-unite/
 	AeosCookie: new Item("AeosCookie", [
 			new Stats({health: 8}),
@@ -358,7 +365,7 @@ Item.LIST = {
 			new Stats({health: 252, spdefense: 39.2}),
 			new Stats({health: 270, spdefense: 39.2}),
 			new Stats({health: 270, spdefense: 42}),
-		], [0.09, 0.12, 0.15], null/*spdef shield*/),
+		], [0.09, 0.12, 0.15], Passive.DUMMY/*spdef shield*/),
 	BuddyBarrier: new Item("BuddyBarrier", [
 			new Stats({health: 20}),
 			new Stats({health: 40}),
@@ -390,7 +397,7 @@ Item.LIST = {
 			new Stats({health: 560}),
 			new Stats({health: 580}),
 			new Stats({health: 600}),
-		], [0.2, 0.3, 0.4], null/*unite shield*/),
+		], [0.2, 0.3, 0.4], Passive.DUMMY/*unite shield*/),
 	AttackWeight: new Item("AttackWeight", [
 			new Stats({attack: 0.6}),
 			new Stats({attack: 1.2}),
@@ -454,7 +461,7 @@ Item.LIST = {
 			new Stats({spattack: 37}),
 			new Stats({spattack: 38}),
 			new Stats({spattack: 39}),
-		], [40, 50, 60], null/*cooldown boost*/),
+		], [40, 50, 60], Passive.DUMMY/*cooldown boost*/),
 	EnergyAmplifier: new Item("EnergyAmplifier", [
 			new Stats({charge: 0.004, cdr: 0}),
 			new Stats({charge: 0.004, cdr: 0.003}),
@@ -486,7 +493,7 @@ Item.LIST = {
 			new Stats({charge: 0.056, cdr: 0.042}),
 			new Stats({charge: 0.06, cdr: 0.042}),
 			new Stats({charge: 0.06, cdr: 0.045}),
-		], [0.07, 0.14, 0.21], null/*unite damage boost*/),
+		], [0.07, 0.14, 0.21], Passive.DUMMY/*unite damage boost*/),
 	ExpShare: new Item("ExpShare", [
 			new Stats({health: 16, movement: 0}),
 			new Stats({health: 16, movement: 10}),
@@ -518,7 +525,7 @@ Item.LIST = {
 			new Stats({health: 224, movement: 140}),
 			new Stats({health: 240, movement: 140}),
 			new Stats({health: 240, movement: 150}),
-		], [2, 3, 4], null/*XXX will never implement*/),
+		], [2, 3, 4], Passive.DUMMY/*XXX will never implement*/),
 	FloatStone: new Item("FloatStone", [
 			new Stats({attack: 1.6, movement: 0}),
 			new Stats({attack: 1.6, movement: 8}),
@@ -582,7 +589,7 @@ Item.LIST = {
 			new Stats({spdefense: 28, defense: 28}),
 			new Stats({spdefense: 30, defense: 28}),
 			new Stats({spdefense: 30, defense: 30}),
-		], [0.08, 0.11, 0.14], null/*shield on low health*/),
+		], [0.08, 0.11, 0.14], Passive.DUMMY/*shield on low health*/),
 	Leftovers: new Item("Leftovers", [
 			new Stats({health: 16, recovery: 0}),
 			new Stats({health: 16, recovery: 0.6}),
@@ -614,7 +621,7 @@ Item.LIST = {
 			new Stats({health: 224, recovery: 8.4}),
 			new Stats({health: 240, recovery: 8.4}),
 			new Stats({health: 240, recovery: 9}),
-		], [0.01, 0.015, 0.02], null/*XXX will never implement*/),
+		], [0.01, 0.015, 0.02], Passive.DUMMY/*XXX never implement*/),
 	MuscleBand: new Item("MuscleBand", [
 			new Stats({attack: 1, aps: 0.0}),
 			new Stats({attack: 1, aps: 0.5}),
@@ -646,7 +653,7 @@ Item.LIST = {
 			new Stats({attack: 14, aps: 7.0}),
 			new Stats({attack: 15, aps: 7.0}),
 			new Stats({attack: 15, aps: 7.5}),
-		], [0.01, 0.02, 0.03], null/*bonus basic attack dmg*/),
+		], [0.01, 0.02, 0.03], Passive.DUMMY/*bonus basic attack dmg*/),
 	RazorClaw: new Item("RazorClaw", [
 			new Stats({attack: 1, critrate: 0.006}),
 			new Stats({attack: 1, critrate: 0.007}),
@@ -678,7 +685,7 @@ Item.LIST = {
 			new Stats({attack: 14, critrate: 0.02}),
 			new Stats({attack: 15, critrate: 0.02}),
 			new Stats({attack: 15, critrate: 0.021}),
-		], [10, 15, 20], null/*bonus basic attack dmg*/),
+		], [10, 15, 20], Passive.DUMMY/*bonus basic attack dmg*/),
 	RockyHelmet: new Item("RockyHelmet", [
 			new Stats({health: 18, defense: 0}),
 			new Stats({health: 18, defense: 2.8}),
@@ -710,7 +717,7 @@ Item.LIST = {
 			new Stats({health: 252, defense: 39.2}),
 			new Stats({health: 270, defense: 39.2}),
 			new Stats({health: 270, defense: 42}),
-		], [0.03, 0.04, 0.05], null/*damage when hit*/),
+		], [0.03, 0.04, 0.05], Passive.DUMMY/*damage when hit*/),
 	ScopeLens: new Item("ScopeLens", [
 			new Stats({critrate: 0.004, critdamage: 0}),
 			new Stats({critrate: 0.004, critdamage: 0.008}),
@@ -742,7 +749,8 @@ Item.LIST = {
 			new Stats({critrate: 0.056, critdamage: 0.112}),
 			new Stats({critrate: 0.06, critdamage: 0.112}),
 			new Stats({critrate: 0.06, critdamage: 0.12}),
-		], [0.45, 0.6, 0.75], null/*bonus crit dmg of atk 1s cd*/),
+		], [0.45, 0.6, 0.75], Passive.DUMMY/* bonus crit dmg of atk,
+						    * 1s cd*/),
 	ScoreShield: new Item("ScoreShield", [
 			new Stats({health: 15}),
 			new Stats({health: 30}),
@@ -774,7 +782,7 @@ Item.LIST = {
 			new Stats({health: 420}),
 			new Stats({health: 435}),
 			new Stats({health: 450}),
-		], [0.05, 0.075, 0.1], null/*shield on score; unlikely to do*/),
+		], [0.05, 0.075, 0.1], Passive.DUMMY/*unlikely to implement*/),
 	ShellBell: new Item("ShellBell", [
 			new Stats({spattack: 1.6, cdr: 0}),
 			new Stats({spattack: 1.6, cdr: 0.003}),
@@ -806,7 +814,7 @@ Item.LIST = {
 			new Stats({spattack: 22.4, cdr: 0.042}),
 			new Stats({spattack: 24, cdr: 0.042}),
 			new Stats({spattack: 24, cdr: 0.045}),
-		], [45, 60, 75], null/*healing on dmg*/),
+		], [45, 60, 75], Passive.DUMMY/*healing on dmg*/),
 	SpAtkSpecs: new Item("SpAtkSpecs", [
 			new Stats({spattack: 0.8}),
 			new Stats({spattack: 1.6}),
@@ -870,7 +878,7 @@ Item.LIST = {
 			new Stats({health: 200, attack: 14}),
 			new Stats({health: 210, attack: 14}),
 			new Stats({health: 210, attack: 15}),
-		], [0.02, 0.025, 0.03], null/*increase dmg when hit*/),
+		], [0.02, 0.025, 0.03], Passive.DUMMY/*increase dmg when hit*/),
 	WiseGlasses: new Item("WiseGlasses", [
 			new Stats({spattack: 10}),
 			new Stats({spattack: 11}),
@@ -930,6 +938,7 @@ function Pokemon(name, type, range, role, prog, moveset, bacond,
 			new LearnSet(learnat2, learnset2),
 			new LearnSet(uniteat, [null, unite]),
 		];
+	this.passive = passive;
 	this.hints = 0;
 	// normalize learnsets
 	for (var l=0; l<this.learnset.length; l++) {
@@ -1064,7 +1073,8 @@ Pokemon.LIST = {
 				"AirSlashHealing", "AirSlashHealing",
 				"AirSlashHealing", "AirSlashHealing" ]),
 		], 9, new ComboMove("GatlingGulpMissile",
-				0, 10, "GatlingGulpOneMissile"), null),
+				0, 10, "GatlingGulpOneMissile"),
+		Passive.DUMMY),
 };
 
 // state classes
@@ -1096,5 +1106,15 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3) {
 	for (var i=0; i<this.items.length; i++) {
 		this.hints|= this.items[i].item.hints;
 		this.items[i].addStats(this.stats);
+	}
+}
+Champion.prototype.procPassives = function(type, foe) {
+	if (arguments.length < 2)
+		foe = null;
+	this.pokemon.passive.proc(type, this, null, foe);
+	for (var i=0; i<this.items.length; i++) {
+		var itm = this.items[i];
+		if (!itm.item) continue;
+		itm.item.passive.proc(type, this, itm, foe);
 	}
 }
