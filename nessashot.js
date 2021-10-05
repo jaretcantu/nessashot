@@ -263,9 +263,10 @@ function Item(name, prog, unlocks, passive) {
 	this.hints = 0;
 	this.passive = passive;
 	// Just check the highest level for any crit modification
-	if (isDefined(prog[prog.length-1].critrate))
+	if (this.progression[this.progression.length-1].critrate)
 		this.hints|= HINT_CRIT;
-	if (typeof(passive) === 'ScoreScalingPassive')
+	if (this.passive != null &&
+	    this.passive.constructor == ScoreScalingPassive)
 		this.hints|= HINT_SCORE;
 }
 Item.LIST = {
@@ -940,6 +941,10 @@ function Pokemon(name, type, range, role, prog, moveset, bacond,
 		];
 	this.passive = passive;
 	this.hints = 0;
+	if (this.progression[this.progression.length-1].critrate)
+		this.hints|= HINT_CRIT;
+	if (this.type == Pokemon.PHYSICAL)
+		this.hints|= HINT_PHYS;
 	// normalize learnsets
 	for (var l=0; l<this.learnset.length; l++) {
 		var ls = this.learnset[l];

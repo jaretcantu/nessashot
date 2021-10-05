@@ -194,10 +194,11 @@ function calcTable(poke, levels, items, learnset1, learnset2, show, score) {
 
 function calcTables(poke, levels, items, learnset1, learnset2, show) {
 	var results = [];
-	var hints = 0;
+	var hints;
 	var scoreMax, i;
 
 	// Check hints
+	hints = poke.hints;
 	for (i=0; i<items.length; i++) 
 		hints |= Item.LIST[items[i][0]].hints;
 	scoreMax = (hints & HINT_SCORE) ? 6 : 0;
