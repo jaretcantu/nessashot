@@ -171,10 +171,9 @@ function calcTable(poke, levels, items, learnset1, learnset2, show, score) {
 		var champ = new Champion(poke, levels[l],
 					items[0][0], items[0][1],
 					items[1][0], items[1][1],
-					items[2][0], items[2][1]);
-		champ.scores = score;
-		// proc INIT passives
-		champ.stats.maxhealth = champ.stats.health;
+					items[2][0], items[2][1], score);
+		champ.init();
+
 		if (show.contains("stats")) {
 			for (var s=0; s<Stats.LIST.length; s++) {
 				var stat = Stats.LIST[s];

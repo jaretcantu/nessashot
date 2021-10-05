@@ -1096,11 +1096,11 @@ ItemState.prototype.addStats = function(stats) {
 	stats.add(this.item.progression[this.level-1]);
 }
 
-function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3) {
+function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3, score){
 	this.pokemon = typeof(poke) === 'string' ? Pokemon.LIST[poke] : poke;
 	this.level = level;
 	this.stats = new Stats(this.pokemon.progression[this.level-1]);
-	this.scores = 0;
+	this.scores = score;
 	this.boostedCounter = 0;
 	// Don't bother sorting items here; sort them when running longterm sims
 	this.items = [	new ItemState(item1, ilev1),
@@ -1112,6 +1112,10 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3) {
 		this.hints|= this.items[i].item.hints;
 		this.items[i].addStats(this.stats);
 	}
+}
+Champion.prototype.init = function() {
+	this.procPassives(Passive.INIT);
+	this.maxhealth = this.stats.health;
 }
 Champion.prototype.procPassives = function(type, foe) {
 	if (arguments.length < 2)
