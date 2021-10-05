@@ -1,4 +1,3 @@
-#!/usr/bin/js
 /* nessashot.js
  * Pokemon UNITE build simulator and comparer
  * Copyright (C) 2021 Jaret Jay Cantu
@@ -6,12 +5,29 @@
  */
 
 // convenience functions
-function isArray(o) { return typeof(o) == 'Array'; }
-function isDefined(o) { return typeof(o) === 'undefined'; }
+function isArray(obj) { return (obj && obj.constructor == Array); }
+function isDefined(obj) { return typeof(obj) != 'undefined'; }
+Array.prototype.contains = function(e) {
+	for (var i=0; i<this.length; i++)
+		if (e == this[i])
+			return true;
+	return false;
+}
+
 
 // constants (that don't have a class to be shoved in)
 var HINT_CRIT	= 0x00000001;
 var HINT_SCORE	= 0x00000002;
+var HINT_PHYS	= 0x00000004;
+
+// non-class mathematic functions
+function damageReduction(d) {
+	return 600 / (600 + d);
+}
+
+function calcEffectiveHP(hp, def) {
+	return Math.floor(hp / damageReduction(def));
+}
 
 // Classes
 
@@ -28,14 +44,14 @@ function Stats(args) {
 		// Re-invoke as array syntax
 		Stats.call(this, arguments);
 	} else if (isDefined(args.length)) {
+		Stats.call(this); // make sure everything is at least zero'd
 		// Array or argument list
-		for (var s=0; s<Stats.LIST.length; s++)
+		for (var s=0; s<args.length; s++)
 			this[Stats.LIST[s]] = args[s];
 		// XXX Define defaults for Pokemon, which aren't known or
 		//     known to be different as of yet.
-		this.critdamage = 2; // damage mux when crit
+		this.critdamage = 1; // additional damage when crit
 		this.charge = 1; // there is some per-pokemon rate
-		this.cooldown = 1; // mods always decrease from 100%
 		this.movement = 600; /* just to show changes with items, which
 				      * are quite large for FloatStone, so go
 				      * with the Defense formula "average" */
@@ -47,9 +63,17 @@ function Stats(args) {
 	}
 }
 Stats.LIST = ["health", "attack", "defense", "spattack", "spdefense",
-		"critrate", "aps",
-		// Stats outside of Pokemon progression and probably item only
-		"charge", "movement", "critdamage", "cooldown", "recovery"];
+		"critrate", "aps", "cdr", "lifesteal",
+		// Stats that are probably in progression but unknown currently
+		"charge", "movement",
+		// Stats that are probably outside of progression and item only
+		"critdamage", "recovery"];
+Stats.prototype.add = function(addend) {
+	for (var i=0; i<Stats.LIST.length; i++) {
+		var s = Stats.LIST[i];
+		this[s]+= addend[s];
+	}
+}
 
 function Passive() {
 	if (arguments.length == 0) return;
@@ -91,10 +115,131 @@ PercentItemPassive.prototype.multiplier = function(poke, item, foe) {
 			  poke.pokemon.progression[poke.level-1][this.stat]);
 }
 
-function Move(name, type) {
+function BoostedProc() {
+}
+BoostedProc.prototype.set = function(poke) { }
+BoostedProc.prototype.check = function(poke) { return false; }
+BoostedProc.prototype.reset = function(poke) {
+	// This should be a fairly common reset
+	poke.boostedCounter = 0;
+}
+
+function UsageBoostedProc(times) {
+	this.times = times;
+}
+UsageBoostedProc.prototype = new BoostedProc();
+UsageBoostedProc.prototype.constructor = UsageBoostedProc;
+UsageBoostedProc.prototype.set = function(poke) {
+	poke.boostedCounter = this.times;
+}
+UsageBoostedProc.prototype.check = function(poke) {
+	if (poke.boostedCounter == this.times-1) {
+		poke.boostedCounter = 0;
+		return true;
+	}
+	poke.boostedCounter++;
+	return false;
+}
+
+function TimedBoostedProc(time) {
+	this.time = time;
+}
+TimedBoostedProc.prototype = new BoostedProc();
+TimedBoostedProc.prototype.constructor = TimedBoostedProc;
+TimedBoostedProc.prototype.set = function(poke) {
+	poke.boostedCounter = this.time;
+}
+TimedBoostedProc.prototype.check = function(poke) {
+	if (poke.boostedCounter >= this.time) {
+		poke.boostedCounter = 0;
+		return true;
+	}
+	/* If user is spamming attacks, and this check is performed after
+	 * every attack, then (this.time/APS) is how long it takes for a
+	 * new boosted attack to be readied.
+	 */
+	poke.boostedCounter+= 1/poke.stats.aps;
+	return false;
+}
+
+BoostedProc.EVERY_3RD = new UsageBoostedProc(3);
+BoostedProc.EVERY_4TH = new UsageBoostedProc(4);
+
+function Move(name, cd) {
 	if (arguments.length == 0) return;
 	this.name = name;
+	this.cooldown = cd;
+	// Values not common enough to justify an argument
+	this.storedUses = 1;
+	this.resetsBoosted = false;
 }
+Move.prototype.setStore = function(u) {
+	this.storedUses = u;
+	return this;
+}
+Move.prototype.setBoost = function() {
+	this.resetsBoosted = true;
+	return this;
+}
+
+function ComboMove(name, cd, moves) {
+	if (arguments.length == 0) return;
+	Move.call(this, name, cd);
+	if (!isArray(moves)) {
+		/* Instead of an array, we have received a times X move string
+		 * argument list, so reformulate this into an array. */
+		var count = moves;
+		moves = new Array(count);
+		for (var m=0; m<count; m++)
+			moves[m] = arguments[3];
+	}
+	this.moves = moves;
+}
+ComboMove.prototype = new Move();
+ComboMove.prototype.constructor = ComboMove;
+
+function StatusMove(name, dur, stats, cd) {
+	if (arguments.length == 0) return;
+	Move.call(this, name, cd);
+	this.duration = dur;
+	this.stats = stats;
+}
+StatusMove.prototype = new Move();
+StatusMove.prototype.constructor = StatusMove;
+
+function DebuffMove(name, dur, stats, cd) {
+	if (arguments.length == 0) return;
+	StatusMove.apply(this, arguments);
+}
+DebuffMove.prototype = new StatusMove();
+DebuffMove.prototype.constructor = DebuffMove;
+
+function HealthModMove(name, pmux, smux, lev, flat, cd) {
+	if (arguments.length == 0) return;
+	Move.call(this, name, cd);
+	this.physMultiplier = pmux;
+	this.specMultiplier = smux;
+	this.levelScaling = lev;
+	this.baseDamage = flat;
+}
+HealthModMove.prototype = new Move();
+HealthModMove.prototype.constructor = HealthModMove;
+
+function DamagingMove(name, pmux, smux, lev, flat, cd) {
+	if (arguments.length == 0) return;
+	HealthModMove.apply(this, arguments);
+}
+DamagingMove.prototype = new HealthModMove();
+DamagingMove.prototype.constructor = DamagingMove;
+
+function HealingMove(name, pmux, smux, lev, flat, cd) {
+	if (arguments.length == 0) return;
+	HealthModMove.apply(this, arguments);
+}
+HealingMove.prototype = new HealthModMove();
+HealingMove.prototype.constructor = HealingMove;
+
+Move.BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0);
 
 function Item(name, prog, unlocks, passive) {
 	if (arguments.length == 0) return;
@@ -117,6 +262,38 @@ function Item(name, prog, unlocks, passive) {
 		this.hints|= HINT_SCORE;
 }
 Item.LIST = {
+	'': new Item("", [ // dummy item
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+			new Stats(),
+		], [0, 0, 0], null),
 	// Item values from https://gamewith.net/pokemon-unite/
 	AeosCookie: new Item("AeosCookie", [
 			new Stats({health: 8}),
@@ -279,36 +456,36 @@ Item.LIST = {
 			new Stats({spattack: 39}),
 		], [40, 50, 60], null/*cooldown boost*/),
 	EnergyAmplifier: new Item("EnergyAmplifier", [
-			new Stats({charge: 0.004, cooldown: -0}),
-			new Stats({charge: 0.004, cooldown: -0.003}),
-			new Stats({charge: 0.008, cooldown: -0.003}),
-			new Stats({charge: 0.008, cooldown: -0.006}),
-			new Stats({charge: 0.012, cooldown: -0.006}),
-			new Stats({charge: 0.012, cooldown: -0.009}),
-			new Stats({charge: 0.016, cooldown: -0.009}),
-			new Stats({charge: 0.016, cooldown: -0.012}),
-			new Stats({charge: 0.02, cooldown: -0.012}),
-			new Stats({charge: 0.02, cooldown: -0.015}),
-			new Stats({charge: 0.024, cooldown: -0.015}),
-			new Stats({charge: 0.024, cooldown: -0.018}),
-			new Stats({charge: 0.028, cooldown: -0.018}),
-			new Stats({charge: 0.028, cooldown: -0.021}),
-			new Stats({charge: 0.032, cooldown: -0.021}),
-			new Stats({charge: 0.032, cooldown: -0.024}),
-			new Stats({charge: 0.036, cooldown: -0.024}),
-			new Stats({charge: 0.036, cooldown: -0.027}),
-			new Stats({charge: 0.04, cooldown: -0.027}),
-			new Stats({charge: 0.04, cooldown: -0.03}),
-			new Stats({charge: 0.044, cooldown: -0.03}),
-			new Stats({charge: 0.044, cooldown: -0.033}),
-			new Stats({charge: 0.048, cooldown: -0.033}),
-			new Stats({charge: 0.048, cooldown: -0.036}),
-			new Stats({charge: 0.052, cooldown: -0.036}),
-			new Stats({charge: 0.052, cooldown: -0.039}),
-			new Stats({charge: 0.056, cooldown: -0.039}),
-			new Stats({charge: 0.056, cooldown: -0.042}),
-			new Stats({charge: 0.06, cooldown: -0.042}),
-			new Stats({charge: 0.06, cooldown: -0.045}),
+			new Stats({charge: 0.004, cdr: 0}),
+			new Stats({charge: 0.004, cdr: 0.003}),
+			new Stats({charge: 0.008, cdr: 0.003}),
+			new Stats({charge: 0.008, cdr: 0.006}),
+			new Stats({charge: 0.012, cdr: 0.006}),
+			new Stats({charge: 0.012, cdr: 0.009}),
+			new Stats({charge: 0.016, cdr: 0.009}),
+			new Stats({charge: 0.016, cdr: 0.012}),
+			new Stats({charge: 0.02, cdr: 0.012}),
+			new Stats({charge: 0.02, cdr: 0.015}),
+			new Stats({charge: 0.024, cdr: 0.015}),
+			new Stats({charge: 0.024, cdr: 0.018}),
+			new Stats({charge: 0.028, cdr: 0.018}),
+			new Stats({charge: 0.028, cdr: 0.021}),
+			new Stats({charge: 0.032, cdr: 0.021}),
+			new Stats({charge: 0.032, cdr: 0.024}),
+			new Stats({charge: 0.036, cdr: 0.024}),
+			new Stats({charge: 0.036, cdr: 0.027}),
+			new Stats({charge: 0.04, cdr: 0.027}),
+			new Stats({charge: 0.04, cdr: 0.03}),
+			new Stats({charge: 0.044, cdr: 0.03}),
+			new Stats({charge: 0.044, cdr: 0.033}),
+			new Stats({charge: 0.048, cdr: 0.033}),
+			new Stats({charge: 0.048, cdr: 0.036}),
+			new Stats({charge: 0.052, cdr: 0.036}),
+			new Stats({charge: 0.052, cdr: 0.039}),
+			new Stats({charge: 0.056, cdr: 0.039}),
+			new Stats({charge: 0.056, cdr: 0.042}),
+			new Stats({charge: 0.06, cdr: 0.042}),
+			new Stats({charge: 0.06, cdr: 0.045}),
 		], [0.07, 0.14, 0.21], null/*unite damage boost*/),
 	ExpShare: new Item("ExpShare", [
 			new Stats({health: 16, movement: 0}),
@@ -565,7 +742,7 @@ Item.LIST = {
 			new Stats({critrate: 0.056, critdamage: 0.112}),
 			new Stats({critrate: 0.06, critdamage: 0.112}),
 			new Stats({critrate: 0.06, critdamage: 0.12}),
-		], [1, 2, 3], null/*literally just stats*/),
+		], [0.45, 0.6, 0.75], null/*bonus crit dmg of atk 1s cd*/),
 	ScoreShield: new Item("ScoreShield", [
 			new Stats({health: 15}),
 			new Stats({health: 30}),
@@ -599,36 +776,36 @@ Item.LIST = {
 			new Stats({health: 450}),
 		], [0.05, 0.075, 0.1], null/*shield on score; unlikely to do*/),
 	ShellBell: new Item("ShellBell", [
-			new Stats({spattack: 1.6, cooldown: 0}),
-			new Stats({spattack: 1.6, cooldown: -0.003}),
-			new Stats({spattack: 3.2, cooldown: -0.003}),
-			new Stats({spattack: 3.2, cooldown: -0.006}),
-			new Stats({spattack: 4.8, cooldown: -0.006}),
-			new Stats({spattack: 4.8, cooldown: -0.009}),
-			new Stats({spattack: 6.4, cooldown: -0.009}),
-			new Stats({spattack: 6.4, cooldown: -0.012}),
-			new Stats({spattack: 8, cooldown: -0.012}),
-			new Stats({spattack: 8, cooldown: -0.015}),
-			new Stats({spattack: 9.6, cooldown: -0.015}),
-			new Stats({spattack: 9.6, cooldown: -0.018}),
-			new Stats({spattack: 11.2, cooldown: -0.018}),
-			new Stats({spattack: 11.2, cooldown: -0.021}),
-			new Stats({spattack: 12.8, cooldown: -0.021}),
-			new Stats({spattack: 12.8, cooldown: -0.024}),
-			new Stats({spattack: 14.4, cooldown: -0.024}),
-			new Stats({spattack: 14.4, cooldown: -0.027}),
-			new Stats({spattack: 16, cooldown: -0.027}),
-			new Stats({spattack: 16, cooldown: -0.03}),
-			new Stats({spattack: 17.6, cooldown: -0.03}),
-			new Stats({spattack: 17.6, cooldown: -0.033}),
-			new Stats({spattack: 19.2, cooldown: -0.033}),
-			new Stats({spattack: 19.2, cooldown: -0.036}),
-			new Stats({spattack: 20.8, cooldown: -0.036}),
-			new Stats({spattack: 20.8, cooldown: -0.039}),
-			new Stats({spattack: 22.4, cooldown: -0.039}),
-			new Stats({spattack: 22.4, cooldown: -0.042}),
-			new Stats({spattack: 24, cooldown: -0.042}),
-			new Stats({spattack: 24, cooldown: -0.045}),
+			new Stats({spattack: 1.6, cdr: 0}),
+			new Stats({spattack: 1.6, cdr: 0.003}),
+			new Stats({spattack: 3.2, cdr: 0.003}),
+			new Stats({spattack: 3.2, cdr: 0.006}),
+			new Stats({spattack: 4.8, cdr: 0.006}),
+			new Stats({spattack: 4.8, cdr: 0.009}),
+			new Stats({spattack: 6.4, cdr: 0.009}),
+			new Stats({spattack: 6.4, cdr: 0.012}),
+			new Stats({spattack: 8, cdr: 0.012}),
+			new Stats({spattack: 8, cdr: 0.015}),
+			new Stats({spattack: 9.6, cdr: 0.015}),
+			new Stats({spattack: 9.6, cdr: 0.018}),
+			new Stats({spattack: 11.2, cdr: 0.018}),
+			new Stats({spattack: 11.2, cdr: 0.021}),
+			new Stats({spattack: 12.8, cdr: 0.021}),
+			new Stats({spattack: 12.8, cdr: 0.024}),
+			new Stats({spattack: 14.4, cdr: 0.024}),
+			new Stats({spattack: 14.4, cdr: 0.027}),
+			new Stats({spattack: 16, cdr: 0.027}),
+			new Stats({spattack: 16, cdr: 0.03}),
+			new Stats({spattack: 17.6, cdr: 0.03}),
+			new Stats({spattack: 17.6, cdr: 0.033}),
+			new Stats({spattack: 19.2, cdr: 0.033}),
+			new Stats({spattack: 19.2, cdr: 0.036}),
+			new Stats({spattack: 20.8, cdr: 0.036}),
+			new Stats({spattack: 20.8, cdr: 0.039}),
+			new Stats({spattack: 22.4, cdr: 0.039}),
+			new Stats({spattack: 22.4, cdr: 0.042}),
+			new Stats({spattack: 24, cdr: 0.042}),
+			new Stats({spattack: 24, cdr: 0.045}),
 		], [45, 60, 75], null/*healing on dmg*/),
 	SpAtkSpecs: new Item("SpAtkSpecs", [
 			new Stats({spattack: 0.8}),
@@ -728,8 +905,14 @@ Item.LIST = {
 		], [0.03, 0.05, 0.07], new PercentItemPassive("spattack")),
 };
 
-function Pokemon(name, type, range, role, prog, basic, boosted, bacond,
-		 moveset1, moveset2, passive) {
+function LearnSet(level, moves) {
+	this.level = level;
+	this.moves = moves;
+}
+
+function Pokemon(name, type, range, role, prog, moveset, bacond,
+		 learnat1, learnset1, learnat2, learnset2,
+		 uniteat, unite, passive) {
 	if (arguments.length == 0) return;
 	if (prog.length != 15) {
 		throw("Pokemon " + name + " has " + prog.length +
@@ -740,6 +923,26 @@ function Pokemon(name, type, range, role, prog, basic, boosted, bacond,
 	this.range = range;
 	this.role = role
 	this.progression = prog;
+	this.boostedProc = bacond;
+	this.moveset = moveset;
+	this.learnset = [
+			new LearnSet(learnat1, learnset1),
+			new LearnSet(learnat2, learnset2),
+			new LearnSet(uniteat, [null, unite]),
+		];
+	this.hints = 0;
+	// normalize learnsets
+	for (var l=0; l<this.learnset.length; l++) {
+		var ls = this.learnset[l];
+		for (var m=0; m<ls.moves.length; m++) {
+			// A null entry means the same as the previous entry
+			if (m>0 && ls.moves[m] === null)
+				ls.moves[m] = ls.moves[m-1];
+			// Expand string key references to object references
+			if (typeof(ls.moves[m]) === "string")
+				ls.moves[m] = this.moveset[ls.moves[m]];
+		}
+	}
 }
 Pokemon.MELEE = 0;
 Pokemon.RANGED = 1;
@@ -756,6 +959,7 @@ Pokemon.LIST = {
 	 * Vim Regex for adding new Pokemon: ,$ s/^\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\([0-9.]\+\)%\s\+\([0-9.]\+\)/\t\t\tnew Stats(\1, \2, \3, \4, \5, \7, \8),/
 	 */
 
+	/*
 	Absol: new Pokemon("Absol",
 			Pokemon.PHYSICAL, Pokemon.MELEE, Pokemon.SPEEDSTER, [
 			new Stats(3000, 170, 52, 20, 36, 0.00, 1),
@@ -777,50 +981,120 @@ Pokemon.LIST = {
 			// three attacks
 		], [
 			// three attacks
-		], null /*ability*/),
+		], null),
+	*/
 	Cramorant: new Pokemon("Cramorant",
 			Pokemon.SPECIAL, Pokemon.RANGED, Pokemon.ATTACKER, [
-			new Stats(3292, 134, 60, 50, 40, 0.00, 0.95),
-			new Stats(3399, 139, 69, 75, 46, 0.00, 0.95),
-			new Stats(3517, 145, 78, 102, 52, 0.00, 0.95),
-			new Stats(3647, 151, 88, 132, 59, 0.00, 0.95),
-			new Stats(3789, 158, 99, 165, 67, 0.00, 0.95),
-			new Stats(3946, 166, 112, 201, 75, 0.00, 0.95),
-			new Stats(4118, 175, 126, 240, 84, 0.00, 0.95),
-			new Stats(4308, 185, 141, 283, 94, 0.00, 0.95),
-			new Stats(4517, 196, 158, 331, 105, 0.00, 0.95),
-			new Stats(4748, 208, 176, 384, 117, 0.00, 0.95),
-			new Stats(5002, 221, 196, 442, 131, 0.00, 0.95),
-			new Stats(5281, 235, 218, 506, 146, 0.00, 0.95),
-			new Stats(5589, 250, 243, 576, 162, 0.00, 0.95),
-			new Stats(5928, 267, 270, 654, 180, 0.00, 0.95),
-			new Stats(6301, 286, 300, 739, 200, 0.00, 0.95),
-		], null, null, null, [
-			// three attacks
-		], [
-			// three attacks
-		], null /*ability*/),
+			new Stats(3292, 134,  60,  50,  40, 0.00, 0.95, 0,   0),
+			new Stats(3399, 139,  69,  75,  46, 0.00, 0.95, 0,   0),
+			new Stats(3517, 145,  78, 102,  52, 0.00, 0.95, 0,   0),
+			new Stats(3647, 151,  88, 132,  59, 0.00, 0.95, 0,   0),
+			new Stats(3789, 158,  99, 165,  67, 0.00, 0.95, 0.05,0),
+			new Stats(3946, 166, 112, 201,  75, 0.00, 0.95, 0.05,0),
+			new Stats(4118, 175, 126, 240,  84, 0.00, 0.95, 0.05,0),
+			new Stats(4308, 185, 141, 283,  94, 0.00, 0.95, 0.05,0),
+			new Stats(4517, 196, 158, 331, 105, 0.00, 0.95, 0.15,0),
+			new Stats(4748, 208, 176, 384, 117, 0.00, 0.95, 0.15,0),
+			new Stats(5002, 221, 196, 442, 131, 0.00, 0.95, 0.15,0),
+			new Stats(5281, 235, 218, 506, 146, 0.00, 0.95, 0.15,0),
+			new Stats(5589, 250, 243, 576, 162, 0.00, 0.95, 0.25,0),
+			new Stats(5928, 267, 270, 654, 180, 0.00, 0.95, 0.25,0),
+			new Stats(6301, 286, 300, 739, 200, 0.00, 0.95, 0.25,0),
+		], {
+			Basic: Move.BASIC,
+			Boosted: new DamagingMove(
+				"Boosted", 0,0.76, 16, 290, 0),
+			WhirlpoolFirstTicks: new DamagingMove(
+				"WhirlpoolFirstTicks", 0,0.24, 5, 100, 0),
+			WhirlpoolMiddleTicks: new DamagingMove(
+				"WhirlpoolMiddleTicks", 0,0.27, 6, 110, 0),
+			WhirlpoolFinalTicks: new DamagingMove(
+				"WhirlpoolFinalTicks", 0,0.3, 7, 120, 0),
+			FeatherDance: new DebuffMove(
+				"FeatherDance", 2/*Maybe get a real value*/,
+				{aps: -0.3, movement:-0.2}, 8),
+			SurfOut: new DamagingMove("SurfOut", 0,0.68, 9, 360, 0),
+			SurfIn: new DamagingMove("SurfIn", 0,1.02, 14, 540, 0),
+			Dive: new DamagingMove(
+				"Dive", 0,0.78, 14, 320,
+					4.5).setStore(3).setBoost(),
+			"Dive+": new DamagingMove(
+				"Dive+", 0,0.86, 16, 360,
+					4.5).setStore(3).setBoost(),
+			Hurricane: new DamagingMove(
+				"Hurricane", 0,1.03, 10, 540, 9),
+			AirSlashBlades: new DamagingMove(
+				"AirSlashBlades", 0,0.35, 6, 150, 0),
+			AirSlashHealing: new HealingMove(
+				"AirSlashHealing", 0,0.3, 0, 60, 0),
+			GatlingGulpOneMissile: new DamagingMove(
+				"GatlingGulpOneMissile", 0,0.35, 6, 150, 0),
+		}, BoostedProc.EVERY_4TH, 4, [
+			new ComboMove("Whirlpool", 5, [
+				"WhirlpoolFirstTicks",
+				"WhirlpoolFirstTicks",
+				"WhirlpoolMiddleTicks",
+				"WhirlpoolMiddleTicks",
+				"WhirlpoolFinalTicks",
+				"WhirlpoolFinalTicks",
+				"WhirlpoolFinalTicks",
+				"WhirlpoolFinalTicks",
+				"WhirlpoolFinalTicks",
+				"WhirlpoolFinalTicks" ]),
+			/* XXX Whirlpool should technically .setBoost() at the
+			 *     end, but this requires manually entering the
+			 *     Whirlpool, which will typically (although not
+			 *     always) be cast far away from the user.
+			 *     There is no real justification to always reset
+			 *     the boosted attack counter, although it very
+			 *     well should be part of advanced tactics when/if
+			 *     those are ever added.
+			 */
+			new ComboMove(
+				"Surf", 8, [ "SurfOut", "SurfIn" ]).setBoost(),
+			null,
+			"Dive", "Dive+",
+		], 6, [
+			"FeatherDance",
+			"Hurricane", null,
+			new ComboMove("AirSlash", 5, 4, "AirSlashBlade"),
+			new ComboMove("AirSlash+", 5, [
+				"AirSlashBlade", "AirSlashBlade",
+				"AirSlashBlade", "AirSlashBlade",
+				"AirSlashHealing", "AirSlashHealing",
+				"AirSlashHealing", "AirSlashHealing" ]),
+		], 9, new ComboMove("GatlingGulpMissile",
+				0, 10, "GatlingGulpOneMissile"), null),
 };
 
 // state classes
 
 function ItemState(item, level) {
-	this.item = typeof(item) === 'String' ? Item.LIST[item] : item;
+	this.item = typeof(item) === 'string' ? Item.LIST[item] : item;
 	this.level = level;
 	this.cooldown = 0;
 	// Set derived values for simplicity
 	this.unlock = this.item.unlocks[this.level > 20 ? 2 :
 					this.level > 10 ? 1 : 0];
 }
+ItemState.prototype.addStats = function(stats) {
+	stats.add(this.item.progression[this.level-1]);
+}
 
 function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3) {
-	this.pokemon = typeof(poke) === 'String' ? Pokemon.LIST[poke] : poke;
+	this.pokemon = typeof(poke) === 'string' ? Pokemon.LIST[poke] : poke;
 	this.level = level;
 	this.stats = new Stats(this.pokemon.progression[this.level-1]);
 	this.scores = 0;
+	this.boostedCounter = 0;
 	// Don't bother sorting items here; sort them when running longterm sims
 	this.items = [	new ItemState(item1, ilev1),
 			new ItemState(item2, ilev2),
 			new ItemState(item3, ilev3) ];
+	// Create easy hints reference so we don't have to recurse every access
+	this.hints = this.pokemon.hints;
+	for (var i=0; i<this.items.length; i++) {
+		this.hints|= this.items[i].item.hints;
+		this.items[i].addStats(this.stats);
+	}
 }
-
