@@ -263,12 +263,7 @@ function calcTables(poke, levels, items, learnset1, learnset2, show) {
 	return results;
 }
 
-if (arguments.length == 0) {
-	showHelp();
-} else {
-	var parsed = parseArgs(arguments);
-
-	// XXX Maybe move this logic somewhere and pass it generically?
+function createTables(parsed) {
 	if (parsed === null)
 		throw("Failed to parse arguments");
 	if (!isDefined(parsed.pokemon))
@@ -432,7 +427,15 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 		}
 	}
 
-	for (t=0; t<tables.length; t++) {
+	return tables;
+}
+
+if (arguments.length == 0) {
+	showHelp();
+} else {
+	var tables = createTables(parseArgs(arguments));
+
+	for (var t=0; t<tables.length; t++) {
 		var tbl = tables[t];
 		for (var e in tbl[1]) {
 			var str = tbl[0] + "@" + e + ": ";
