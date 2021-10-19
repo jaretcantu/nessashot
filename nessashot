@@ -7,6 +7,7 @@ function showHelp() {
 	print("          [-l|--levels {#,#...|#-#}]       \\");
 	print("          [-m|--move 1|2|Name]             \\");
 	print("          [-i|--item Name(=Level)]         \\");
+	print("          [--itemlevel Name=Level]         \\");
 	print("          [--itemdefault Level]            \\");
 	print("          [-o|--optimize items|itemlevels] \\");
 	print("          Pokemon                         - Show Pokemon chart");
@@ -66,7 +67,7 @@ function parseOption(parsed, arg, args, a)
 			l = arg.substring(split+1);
 		} else {
 			i = arg;
-			l = 0;
+			l = parsed.itemlevels[i] || 0;
 		}
 		if (parsed.items.length >= 3) {
 			throw("Too many items specified");
@@ -74,7 +75,22 @@ function parseOption(parsed, arg, args, a)
 			throw("Unknown item: " + i);
 		}
 		parsed.items.push(i);
-		parsed.itemlevels.push(l);
+		parsed.itemlevels[i] = l;
+		break;
+	case 'itemlevel':
+		arg = args[++a];
+		var split = arg.indexOf('=');
+		var i, l;
+		if (split > 0) {
+			i = arg.substring(0, split);
+			l = arg.substring(split+1);
+		} else {
+			throw("Invalid itemlevel " + arg +
+				"; item=level expected");
+		}
+		if (!isDefined(Item.LIST[i]))
+			throw("Unknown item: " + i);
+		parsed.itemlevels[i] = l;
 		break;
 	case 'itemdefault':
 		arg = args[++a];
@@ -143,7 +159,7 @@ function parseArgs(args) {
 			levels: [],
 			moves: [],
 			items: [],
-			itemlevels: [],
+			itemlevels: {},
 			itemdefault: 20,
 			show: [],
 		};
@@ -309,7 +325,7 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 		var leveledItems = []; // array of pairs
 		var unleveledItems = []; // array of names
 		for (i=0; i<parsed.items.length; i++) {
-			var lvl = parsed.itemlevels[i];
+			var lvl = parsed.itemlevels[parsed.items[i]];
 			if (lvl)
 				leveledItems.push([parsed.items[i], lvl]);
 			else
@@ -390,7 +406,7 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 	} else { // no item search
 		var specItems = [];
 		for (i=0; i<parsed.items.length; i++) {
-			var lvl = parsed.itemlevels[i];
+			var lvl = parsed.itemlevels[parsed.items[i]];
 			specItems.push([parsed.items[i],
 					lvl ? lvl : parsed.itemdefault]);
 		}
