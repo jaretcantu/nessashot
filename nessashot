@@ -13,6 +13,8 @@ function showHelp() {
 }
 
 function parseArgs(args) {
+	var opts = { h: "help", i: "item", l: "levels", m: "move",
+		     o: "optimize", s: "show" };
 	var parsed = {
 			levels: [],
 			moves: [],
@@ -35,12 +37,37 @@ function parseArgs(args) {
 			continue;
 		}
 		// Only switches will be processed from here on out
-		switch (arg) {
-		case '-h': case '--help':
+
+		// Check if it is a name/value pair
+		var eq = arg.indexOf('=');
+		if (eq > 0) {
+			// Insert value into argument list
+			args[a--] = arg.substring(1+eq);
+			arg = arg.substring(0, eq);
+		}
+
+		// Need to separate pairs before processing hyphens
+		var nc = arg.charAt(1);
+		if (arg.length == 2) {
+			// Must be hyphen-char combination
+			if (!isDefined(opts[nc]))
+				throw("Unknown option: " + arg);
+			arg = opts[nc];
+		} else if (nc == '-') {
+			// Two hyphens followed by full option name
+			arg = arg.substring(2);
+		} else {
+			throw("Unknown option: " + arg);
+		}
+
+		// Special case; will only be processed on the cmdline
+		if (arg == 'help') {
 			showHelp();
 			quit();
-			throw("Unreachable");
-		case '-s': case '--show':
+		}
+
+		switch (arg) {
+		case 'show':
 			arg = args[++a];
 			if (!isDefined(parsed.show))
 				parsed.show = [];
@@ -52,7 +79,7 @@ function parseArgs(args) {
 				parsed.show.push(arg);
 			}
 			break;
-		case '-l': case '--levels':
+		case 'levels':
 			arg = args[++a];
 			var split, l, i;
 			// First obtain an array of all given levels
@@ -80,7 +107,7 @@ function parseArgs(args) {
 				parsed.levels.push(lvl);
 			}
 			break;
-		case '-i': case '--item':
+		case 'item':
 			arg = args[++a];
 			var split = arg.indexOf('=');
 			var i, l;
@@ -99,7 +126,7 @@ function parseArgs(args) {
 			parsed.items.push(i);
 			parsed.itemlevels.push(l);
 			break;
-		case '--itemdefault':
+		case 'itemdefault':
 			arg = args[++a];
 			if (isNaN(arg))
 				throw("Non-numeric default item level");
@@ -108,7 +135,7 @@ function parseArgs(args) {
 					arg + " (Should be 1-30)");
 			parsed.itemdefault = arg;
 			break;
-		case '-m': case '--move':
+		case 'move':
 			arg = args[++a];
 			if (parsed.moves.length >= 2) {
 				throw("Too many moves specified");
@@ -119,7 +146,7 @@ function parseArgs(args) {
 			}
 			parsed.moves.push(arg);
 			break;
-		case '-o': case '--optimize':
+		case 'optimize':
 			if (isDefined(parsed.search)) {
 				throw("Already optimizing " + parsed.search +
 					"; cannot search " + arg + ", too.");
