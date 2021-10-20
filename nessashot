@@ -212,11 +212,8 @@ function parseArgs(args) {
 	return parsed;
 }
 
-function calcTable(poke, levels, items, learnset1, learnset2, show, score) {
-	var label = poke.name + ": " + items.join("/") + " " +
-			poke.learnset[0].moves[1 + 2*(learnset1-1)].name + "/" +
-			poke.learnset[1].moves[1 + 2*(learnset2-1)].name +
-			"@" + score;
+function calcTable(poke, levels, items, show, score) {
+	var label = poke.name + ": " + items.join("/") + " @" + score;
 	var result = [label];
 
 	// TODO Determine show actions
@@ -245,7 +242,7 @@ function calcTable(poke, levels, items, learnset1, learnset2, show, score) {
 	return result;
 }
 
-function calcTables(poke, levels, items, learnset1, learnset2, show) {
+function calcTables(poke, levels, items, show) {
 	var results = [];
 	var hints;
 	var scoreMax, i;
@@ -257,8 +254,7 @@ function calcTables(poke, levels, items, learnset1, learnset2, show) {
 	scoreMax = (hints & HINT_SCORE) ? 6 : 0;
 
 	for (i=0; i<=scoreMax; i++)
-		results.push(calcTable(poke, levels, items,
-					learnset1, learnset2, show, i));
+		results.push(calcTable(poke, levels, items, show, i));
 
 	return results;
 }
@@ -414,21 +410,17 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 	// Multiplex search parameters (NB: More multiplexing based on hints)
 	var t, tables = [];
 	for (i=0; i<iterItems.length; i++) {
-		for (var m1=0; m1<iterMoves[0].length; m1++) {
-			for (var m2=0; m2<iterMoves[1].length; m2++) {
-				var tbl = calcTables(poke, levelList,
-							iterItems[i],
-							iterMoves[0][m1],
-							iterMoves[1][m2],
-							parsed.show);
-				for (t=0; t<tbl.length; t++)
-					tables.push(tbl[t]);
-			}
-		}
+		var tbl = calcTables(poke, levelList,
+					iterItems[i],
+					parsed.show);
+		for (t=0; t<tbl.length; t++)
+			tables.push(tbl[t]);
 	}
 
 	return tables;
 }
+
+
 
 if (arguments.length == 0) {
 	showHelp();
