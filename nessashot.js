@@ -65,6 +65,8 @@ function Stats(args) {
 }
 Stats.LIST = ["health", "attack", "defense", "spattack", "spdefense",
 		"critrate", "aps", "cdr", "lifesteal",
+		// Known values, but aren't in the json
+		"spellvamp", "tenacity",
 		// Stats that are probably in progression but unknown currently
 		"charge", "movement",
 		// Stats that are probably outside of progression and item only
@@ -915,13 +917,14 @@ Item.LIST = {
 		], [0.03, 0.05, 0.07], new PercentItemPassive("spattack")),
 };
 
-function LearnSet(level, moves) {
+function LearnSet(level, upgrade, moves) {
 	this.level = level;
+	this.upgrade = upgrade;
 	this.moves = moves;
 }
 
 function Pokemon(name, type, range, role, prog, moveset, bacond,
-		 learnat1, learnset1, learnat2, learnset2,
+		 learnat1, upgrade1, learnset1, learnat2, upgrade2, learnset2,
 		 uniteat, unite, passive) {
 	if (arguments.length == 0) return;
 	if (prog.length != 15) {
@@ -936,9 +939,9 @@ function Pokemon(name, type, range, role, prog, moveset, bacond,
 	this.boostedProc = bacond;
 	this.moveset = moveset;
 	this.learnset = [
-			new LearnSet(learnat1, learnset1),
-			new LearnSet(learnat2, learnset2),
-			new LearnSet(uniteat, [null, unite]),
+			new LearnSet(learnat1, upgrade1, learnset1),
+			new LearnSet(learnat2, upgrade2, learnset2),
+			new LearnSet(uniteat, 0, [null, unite]),
 		];
 	this.passive = passive;
 	this.hints = 0;
@@ -968,120 +971,6 @@ Pokemon.ATTACKER = 1;
 Pokemon.DEFENDER = 2;
 Pokemon.SPEEDSTER = 3;
 Pokemon.SUPPORTER = 4;
-Pokemon.LIST = {
-	/* Pokemon stat values from:
-	 * https://docs.google.com/spreadsheets/d/1NYPIwDKTN1RaoiN7C9rG64rbNz8T0zw48-7SW5UEc94/edit#gid=223518408
-	 * Vim Regex for adding new Pokemon: ,$ s/^\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\([0-9.]\+\)%\s\+\([0-9.]\+\)/\t\t\tnew Stats(\1, \2, \3, \4, \5, \7, \8),/
-	 */
-
-	/*
-	Absol: new Pokemon("Absol",
-			Pokemon.PHYSICAL, Pokemon.MELEE, Pokemon.SPEEDSTER, [
-			new Stats(3000, 170, 52, 20, 36, 0.00, 1),
-			new Stats(3107, 186, 59, 23, 41, 0.00, 1.018),
-			new Stats(3224, 204, 67, 27, 47, 0.00, 1.036),
-			new Stats(3353, 223, 76, 31, 53, 0.00, 1.054),
-			new Stats(3495, 244, 86, 36, 60, 5.00, 1.072),
-			new Stats(3651, 267, 97, 41, 68, 5.00, 1.09),
-			new Stats(3823, 293, 109, 47, 76, 5.00, 1.108),
-			new Stats(4012, 321, 122, 53, 85, 5.00, 1.126),
-			new Stats(4221, 352, 136, 60, 95, 10.00, 1.144),
-			new Stats(4451, 387, 152, 58, 106, 10.00, 1.162),
-			new Stats(4704, 425, 170, 76, 118, 10.00, 1.18),
-			new Stats(4983, 467, 189, 85, 131, 10.00, 1.198),
-			new Stats(5290, 513, 210, 95, 146, 10.00, 1.216),
-			new Stats(5628, 564, 233, 106, 162, 10.00, 1.234),
-			new Stats(6000, 620, 259, 118, 180, 10.00, 1.252),
-		], null, null, null, [
-			// three attacks
-		], [
-			// three attacks
-		], null),
-	*/
-	Cramorant: new Pokemon("Cramorant",
-			Pokemon.SPECIAL, Pokemon.RANGED, Pokemon.ATTACKER, [
-			new Stats(3292, 134,  60,  50,  40, 0.00, 0.95, 0,   0),
-			new Stats(3399, 139,  69,  75,  46, 0.00, 0.95, 0,   0),
-			new Stats(3517, 145,  78, 102,  52, 0.00, 0.95, 0,   0),
-			new Stats(3647, 151,  88, 132,  59, 0.00, 0.95, 0,   0),
-			new Stats(3789, 158,  99, 165,  67, 0.00, 0.95, 0.05,0),
-			new Stats(3946, 166, 112, 201,  75, 0.00, 0.95, 0.05,0),
-			new Stats(4118, 175, 126, 240,  84, 0.00, 0.95, 0.05,0),
-			new Stats(4308, 185, 141, 283,  94, 0.00, 0.95, 0.05,0),
-			new Stats(4517, 196, 158, 331, 105, 0.00, 0.95, 0.15,0),
-			new Stats(4748, 208, 176, 384, 117, 0.00, 0.95, 0.15,0),
-			new Stats(5002, 221, 196, 442, 131, 0.00, 0.95, 0.15,0),
-			new Stats(5281, 235, 218, 506, 146, 0.00, 0.95, 0.15,0),
-			new Stats(5589, 250, 243, 576, 162, 0.00, 0.95, 0.25,0),
-			new Stats(5928, 267, 270, 654, 180, 0.00, 0.95, 0.25,0),
-			new Stats(6301, 286, 300, 739, 200, 0.00, 0.95, 0.25,0),
-		], {
-			Basic: Move.BASIC,
-			Boosted: new DamagingMove(
-				"Boosted", 0,0.76, 16, 290, 0),
-			WhirlpoolFirstTicks: new DamagingMove(
-				"WhirlpoolFirstTicks", 0,0.24, 5, 100, 0),
-			WhirlpoolMiddleTicks: new DamagingMove(
-				"WhirlpoolMiddleTicks", 0,0.27, 6, 110, 0),
-			WhirlpoolFinalTicks: new DamagingMove(
-				"WhirlpoolFinalTicks", 0,0.3, 7, 120, 0),
-			FeatherDance: new DebuffMove(
-				"FeatherDance", 2/*Maybe get a real value*/,
-				{aps: -0.3, movement:-0.2}, 8),
-			SurfOut: new DamagingMove("SurfOut", 0,0.68, 9, 360, 0),
-			SurfIn: new DamagingMove("SurfIn", 0,1.02, 14, 540, 0),
-			Dive: new DamagingMove(
-				"Dive", 0,0.78, 14, 320,
-					4.5).setStore(3).setBoost(),
-			"Dive+": new DamagingMove(
-				"Dive+", 0,0.86, 16, 360,
-					4.5).setStore(3).setBoost(),
-			Hurricane: new DamagingMove(
-				"Hurricane", 0,1.03, 10, 540, 9),
-			AirSlashBlades: new DamagingMove(
-				"AirSlashBlades", 0,0.35, 6, 150, 0),
-			AirSlashHealing: new HealingMove(
-				"AirSlashHealing", 0,0.3, 0, 60, 0),
-			GatlingGulpOneMissile: new DamagingMove(
-				"GatlingGulpOneMissile", 0,0.35, 6, 150, 0),
-		}, BoostedProc.EVERY_4TH, 4, [
-			new ComboMove("Whirlpool", 5, [
-				"WhirlpoolFirstTicks",
-				"WhirlpoolFirstTicks",
-				"WhirlpoolMiddleTicks",
-				"WhirlpoolMiddleTicks",
-				"WhirlpoolFinalTicks",
-				"WhirlpoolFinalTicks",
-				"WhirlpoolFinalTicks",
-				"WhirlpoolFinalTicks",
-				"WhirlpoolFinalTicks",
-				"WhirlpoolFinalTicks" ]),
-			/* XXX Whirlpool should technically .setBoost() at the
-			 *     end, but this requires manually entering the
-			 *     Whirlpool, which will typically (although not
-			 *     always) be cast far away from the user.
-			 *     There is no real justification to always reset
-			 *     the boosted attack counter, although it very
-			 *     well should be part of advanced tactics when/if
-			 *     those are ever added.
-			 */
-			new ComboMove(
-				"Surf", 8, [ "SurfOut", "SurfIn" ]).setBoost(),
-			null,
-			"Dive", "Dive+",
-		], 6, [
-			"FeatherDance",
-			"Hurricane", null,
-			new ComboMove("AirSlash", 5, 4, "AirSlashBlade"),
-			new ComboMove("AirSlash+", 5, [
-				"AirSlashBlade", "AirSlashBlade",
-				"AirSlashBlade", "AirSlashBlade",
-				"AirSlashHealing", "AirSlashHealing",
-				"AirSlashHealing", "AirSlashHealing" ]),
-		], 9, new ComboMove("GatlingGulpMissile",
-				0, 10, "GatlingGulpOneMissile"),
-		Passive.DUMMY),
-};
 
 // state classes
 

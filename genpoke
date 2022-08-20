@@ -1,0 +1,318 @@
+#!/usr/bin/js
+/* genpoke
+ * Generate the pokemon.js include from unite-db.com files (stats.json and
+ * pokemon.json) and the preprocessor code accessory (preproc.ini)
+ * Copyright (C) 2022 Jaret Jay Cantu
+ * Licensed under the AGPL
+ *
+ * Pokemon stat values originally from:
+ * https://docs.google.com/spreadsheets/d/1NYPIwDKTN1RaoiN7C9rG64rbNz8T0zw48-7SW5UEc94/edit#gid=223518408
+ * Vim Regex for adding new Pokemon: ,$ s/^\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\(\d\+\)\s\+\([0-9.]\+\)%\s\+\([0-9.]\+\)/\t\t\tnew Stats(\1, \2, \3, \4, \5, \7, \8),/
+ */
+
+// file utility functions
+function readAndHashJson(f) {
+	// read file
+	var content = read(f);
+	if (content == '')
+		throw("Could not read file: " + f);
+	var parsed = JSON.parse(content);
+	if (!parsed || parsed.length == 0)
+		throw("Could not parse file: " + f);
+	// convert sequential array into a hash organized by name element
+	var rehashed = {};
+	for (var p=0; p<parsed.length; p++) {
+		var e = parsed[p];
+		rehashed[e.name] = e;
+	}
+
+	return rehashed;
+}
+
+function readAndHashIni(f) {
+	// read file
+	var content = read(f);
+	if (content == '')
+		throw("Could not read file: " + f);
+	var lines = content.split("\n");
+	// Run through gross file to extract move code
+	var rehashed = {};
+	var poke = '';
+	var seq;
+	for (var i=0; i<lines.length; i++) {
+		var l = lines[i];
+		l = l.replace(/#.*$/, '');
+		if (l.match(/^\[.*\]\s*$/)) {
+			poke = l.substring(1, l.length-1);
+			rehashed[poke] = {learnset: ['','','','']};
+			seq = 0;
+		} else if (l.match(/^\s*$/)) {
+			if (poke != '')
+				seq = (seq < 0 ? 0 : seq+1);
+		} else if (poke == '') {
+			throw("No Pokemon declared for code: " + l);
+		} else if (l.match(/^\s*\w+\s*=/) && seq <= 0) {
+			var p = l.match(/^\s*(\w+)\s*=\s*([^\s]+)\s*$/);
+			// Special value lines
+			rehashed[poke][p[1]] = p[2];
+			if (seq == 0) seq = -1;
+		} else {
+			// Use sequence to determine which learnset/unite move
+			if (rehashed[poke].learnset[seq] != '')
+				rehashed[poke].learnset[seq]+= "\n";
+			rehashed[poke].learnset[seq]+= l;
+		}
+	}
+	return rehashed;
+}
+
+// global switches
+var PREPROC_TARGET = null;
+
+// Convenience mapping so that changes to the JSON don't invalidate this script
+var MAPPING = {
+		ability: 'skills[0].rsb',
+		basic: 'skills[1].rsb',
+		boosted: 'skills[1].boosted_rsb',
+		move1: 'skills[2].rsb',
+		move1cd: 'skills[2].cd',
+		learnat1: 'skills[2].upgrades[0].level1',
+		upgradeat1: 'skills[2].upgrades[0].level2',
+		upgrade1a: 'skills[2].upgrades[0].rsb',
+		upgrade1acd: 'skills[2].upgrades[0].cd1',
+		upgrade1b: 'skills[2].upgrades[1].rsb',
+		upgrade1bcd: 'skills[2].upgrades[1].cd1',
+		move2: 'skills[3].rsb',
+		move2cd: 'skills[3].cd',
+		learnat2: 'skills[3].upgrades[0].level1',
+		upgradeat2: 'skills[3].upgrades[0].level2',
+		upgrade2a: 'skills[3].upgrades[0].rsb',
+		upgrade2acd: 'skills[3].upgrades[0].cd1',
+		upgrade2b: 'skills[3].upgrades[1].rsb',
+		upgrade2bcd: 'skills[3].upgrades[1].cd1',
+		unite: 'skills[4].rsb',
+		unitecd: 'skills[4].cd',
+	};
+// Simple list for iterating all moves
+var ALL_MOVES = ['boosted', 'move1', 'upgrade1a', 'upgrade1b',
+		 'move2', 'upgrade2a', 'upgrade2b', 'unite'];
+
+// Utility functions to be used by main function
+
+function funcSub(func, str) {
+	if (PREPROC_TARGET)
+		return str; // parse nothing
+	return str.replaceAll(funcSub.pattern, func);
+}
+funcSub.pattern = /\$[a-zA-Z0-9_.]+/g; // just build this once?
+
+function prindent(prefix, str) {
+	var lines = str.split(/\n/);
+	for (var l=0; l<lines.length; l++) {
+		print(prefix + lines[l]);
+	}
+}
+
+function fallback(val, dflt) {
+	return (typeof(val) === 'undefined' ? dflt : val);
+}
+
+function $(json, key) {
+	// convenience function for returning json[key] or the preproc literal
+	// based on global preprocessing switch
+	if (PREPROC_TARGET) return json.PPN + '.' + key;
+	return json[key] || 0; // can also easily ensure non-empty return
+}
+
+function getMoveFromJson(pad, p,rfunc, move) {
+	// This function is largely here because the indention was too much
+	var ppn = '$' + move;
+	var m = rfunc(ppn);
+	m.PPN = ppn; // for preprocessing
+	if (!m) return;
+	var nam = m['name'];
+	if (!nam) return;
+	var enh = false;
+	for (var pr=0;; pr++) {
+		var pfx = (enh ? 'enhanced_' : '') + (pr ? 'add'+pr+'_' : '');
+		var lbl = m[pfx + 'label'];
+		if (!lbl) {
+			if (enh) // already did an enhanced version
+				break;
+			// check for enhanced version
+			pr = -1; // start at 0 on next
+			enh = true;
+			nam+= '+';
+			continue;
+		} else if (lbl=='Damage - Boosted') {
+			// convenience replacement
+			lbl = 'Boosted';
+		} else if (lbl.match(/^Damage/)) {
+			lbl = nam + lbl.substring(6);
+		} else {
+			lbl = nam + lbl;
+		}
+		// Remove most non-alphanumeric chars from label;
+		// Keep parenths as they are often informative
+		lbl = lbl.replaceAll(/[- ]/g, '');
+		var rt = $(m,pfx+'ratio');
+		var q = (lbl.match(/\W/) ? '"' : '');
+		var cd = 0;
+		if (pr == 0) {
+			var cdk = move + 'cd';
+			if (MAPPING[cdk]) {
+				cd = funcSub(rfunc, '$' + cdk);
+			}
+			if (enh) {
+				/*
+				XXX Enhanced CDR does not work automatically
+				var cdrk = pfx+'cdr';
+				var cdr =$(m,cdrk);
+				if (cdr)
+					cd+= "-" + funcSub(rfunc,
+						'$' + move+'.'+cdrk);
+				*/
+			}
+		}
+		// Just assume everything is damaging; it can be changed later.
+		print(pad + q + lbl + q + ": new DamagingMove(\"" + lbl +
+			"\", " +
+		      (p.damage_type == 'Physical' ?  rt + ",0" : "0," + rt) +
+		      ", " + $(m,pfx+'slider') + ", " + $(m,pfx+'base') +
+		      ", " + cd + "),");
+	}
+}
+
+// main function
+function run(args) {
+	// check args
+	while (args.length && args[0].charAt(0) == '-') {
+		var arg = args.shift();
+		switch (arg) {
+		case '-p': case '--preproc':
+			PREPROC_TARGET = args.shift();
+			break;
+		case '-h': case '--help':
+			print("./genpoke [args?] [stats.json [pokemon.json " +
+				"[preproc.ini]]]");
+			quit(0);
+		default:
+			throw("Unknown argument: " + arg);
+		}
+	}
+
+	// get info
+	var stats = readAndHashJson(scriptArgs && scriptArgs.length > 0
+				    ? scriptArgs[0] : "stats.json");
+	var pokes = readAndHashJson(scriptArgs && scriptArgs.length > 1
+				    ? scriptArgs[1] : "pokemon.json");
+	var code = readAndHashIni(scriptArgs && scriptArgs.length > 2
+				    ? scriptArgs[2] : "preproc.ini");
+
+
+	// print header
+	print("// nessashot Pokemon stat listing -- Generated file");
+	print("// " + (new Date()));
+	print("Pokemon.LIST = {");
+
+	for (var k in pokes) {
+		var p = pokes[k];
+		if (PREPROC_TARGET && p.name != PREPROC_TARGET) continue;
+		var s = stats[k];
+		var c = code[k] || {};
+		var rfunc = function(str) {
+			// Assume that str is of form $..., so chop off dollar
+			var segs = str.substring(1).split('.');
+			var mapped = '';
+			for (var s=0; s<segs.length; s++) {
+				var seg = segs[s];
+				if (mapped != '') mapped+= '.';
+				mapped+= fallback(MAPPING[seg], seg);
+				/* XXX for debugging
+				var name = 'rfunc.xml.' + mapped;
+				var val = eval(name);
+				var str;
+				if (val instanceof Object) {
+					str = '';
+					for (var k in val) {
+						str+= k + "=" + val[k] + ", ";
+					}
+				} else {
+					str = val;
+				}
+				print(name + ': ' + str);
+				*/
+			}
+			// We use this to parse numeric values, so if one
+			// isn't found, return a zero.  This is legitimate since
+			// several moves do not have ratio/slider/base.
+			var val = eval('rfunc.xml.' + mapped) || '0';
+			if (mapped.match(/ratio$/))
+				val/= 100.0;
+			return val;
+		};
+		rfunc.xml = p; // give function access to move data
+		/* XXX Could use display_name instead of name, but the
+		 *     name is probably reflexive upon the hash, so just
+		 *     use the name. */
+		var q = (p.name.match(/\W/) ? '"' : '');
+		print("\t" +q+ p.name +q+ ": new Pokemon(\"" + p.name + "\",");
+		print("\t\tPokemon." + p.damage_type.toUpperCase() +
+			", Pokemon." + p.tags.range.toUpperCase() +
+			", Pokemon." + p.tags.role.replaceAll(/\W/g,''
+						).toUpperCase() + ", [");
+		for (var l=0; l<s.level.length; l++) {
+			var lvl = s.level[l];
+			print("\t\t\tnew Stats(" + lvl.hp + ", " +
+				lvl.attack + ", " + lvl.defense + ", " +
+				lvl.sp_attack + ", " + lvl.sp_defense + ", " +
+				(lvl.crit/100.0) + ", " +
+				((90+lvl.attack_speed)/100.0) + ", " +
+				(lvl.cdr/100.0) + ", " +
+				(lvl.lifesteal/100.0) +
+				", 0,0),"); // spellvamp and tenacity
+		}
+		print("\t\t], {");
+		// Move library: run replacements on numbers
+		if (typeof(c.learnset) === 'undefined' || c.learnset.length<1) {
+			var pad = (PREPROC_TARGET ? '' : "\t\t\t");
+			print(pad + "Basic: Move.BASIC,");
+			// Initialize a new Pokemon with all possible damage
+			// values that can be found in the JSON.
+			for (var i=0; i<ALL_MOVES.length; i++) {
+				getMoveFromJson(pad, p,rfunc, ALL_MOVES[i]);
+			}
+		} else {
+			prindent("\t\t\t", funcSub(rfunc, c.learnset[0]));
+		}
+		print("\t\t}, " +
+		      fallback(c.boostedproc, "BoostedProc.EVERY_3RD") + ", " +
+		      fallback(c.learnat1, 4) + ", " +
+		      fallback(c.upgradeat1, 11) + ", [");
+		// three moves: initial, two choices
+		if (typeof(c.learnset) === 'undefined' || c.learnset.length<2) {
+		} else {
+			prindent("\t\t\t", funcSub(rfunc, c.learnset[1]));
+		}
+		print("\t\t], " +
+		      fallback(c.learnat2, 4) + ", " +
+		      fallback(c.upgradeat2, 11) + ", [");
+		// other three moves: initial, two choices
+		if (typeof(c.learnset) !== 'undefined' && c.learnset.length>=3)
+			prindent("\t\t\t", funcSub(rfunc,c.learnset[2]));
+		// Unite move
+		print("\t\t], " + fallback(c.uniteat, 9) + ",");
+		prindent("\t\t",
+			 fallback(c.learnset && funcSub(rfunc, c.learnset[3]),
+				 'null') + ",");
+		print("\t\t" +
+		      (typeof(c.passive) !== 'undefined'
+		       ? c.passive : "Passive.DUMMY") +
+		      "),");
+	}
+
+	// print footer
+	print("}");
+};
+
+run(scriptArgs);
