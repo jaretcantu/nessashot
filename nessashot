@@ -31,7 +31,7 @@ function parseArgs(args) {
 			moves: [],
 			items: [],
 			itemlevels: {},
-			itemdefault: 20,
+			itemdefault: 30,
 			scores: null,
 			show: [],
 			sort: [],
