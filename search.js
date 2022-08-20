@@ -1,10 +1,50 @@
 /* search.js
  * Data structures and algorithms for searching and optimizing Pokemon UNITE
- * Copyright (C) 2021 Jaret Jay Cantu
+ * Copyright (C) 2021-2022 Jaret Jay Cantu
  * Licensed under the AGPL
  */
 
 // classes
+
+function Calc(name, prereq, func) {
+	if (arguments.length == 0) return;
+	this.name = name;
+	this.prerequisites = prereq;
+	this.calculate = func;
+}
+Calc.prototype.recurse = function(r, champ, enemy, param) {
+	// Short-circuit if result is already populated
+	if (isDefined(r[this.name]))
+		return;
+
+	// Populate anything that might be needed for this calculation
+	for (var pr=0; pr<this.prerequisites.length; pr++)
+		Calc.LIST[this.prerequisites[pr]].recurse(r, champ, enemy,
+							  param);
+
+	this.calculate(r, champ, enemy, param);
+}
+Calc.LIST = {
+	"stats": new Calc("stats", [], function(r, champ, enemy, p) {
+			for (var s=0; s<Stats.LIST.length; s++) {
+				var stat = Stats.LIST[s];
+				r[stat] = champ.stats[stat];
+			}
+		}),
+	"physhp": new Calc("physhp", [], function(r, champ, enemy, p) {
+			r.physhp = calcEffectiveHP(champ.stats.health,
+						   champ.stats.defense);
+		}),
+	"spechp": new Calc("spechp", [], function(r, champ, enemy, p) {
+			r.spechp = calcEffectiveHP(champ.stats.health,
+						   champ.stats.spdefense);
+		}),
+	"tankiness": new Calc("tankiness", ["physhp", "spechp"],
+		function(r, champ, enemy, p) {
+			r.tankiness = r.physhp * (1-p.specialperc) +
+				      r.spechp * p.specialperc;
+		}),
+};
 
 
 // generic interface functions
@@ -23,6 +63,30 @@ function parseOption(parsed, arg, args, a) {
 				parsed.show.push(shows[i]);
 		} else {
 			parsed.show.push(arg);
+		}
+		break;
+	case 'sort':
+		arg = args[++a];
+		if (!isDefined(parsed.sort))
+			parsed.sort = [];
+		if (arg.indexOf(',') >= 0) {
+			var sorts = arg.split(',');
+			for (var i=0; i<sorts.length; i++)
+				parsed.sort.push(sorts[i]);
+		} else {
+			parsed.sort.push(arg);
+		}
+		break;
+	case 'score':
+		arg = args[++a];
+		if (!isDefined(parsed.scores) || !parsed.scores)
+			parsed.scores = [];
+		if (arg.indexOf(',') >= 0) {
+			var scores = arg.split(',');
+			for (var i=0; i<scores.length; i++)
+				parsed.scores.push(scores[i]);
+		} else {
+			parsed.scores.push(arg);
 		}
 		break;
 	case 'levels':
@@ -140,6 +204,12 @@ function parseOption(parsed, arg, args, a) {
 			parsed.searchargs = v;
 		}
 		break;
+	case 'specperc':
+		arg = args[++a];
+		if (isNaN(arg))
+			throw("Invalid special tank percentage: " + arg);
+		parsed.specialperc = arg / 100.0;
+		break;
 	default:
 		throw("Unknown option: " + arg);
 	}
@@ -147,7 +217,7 @@ function parseOption(parsed, arg, args, a) {
 	return a - initialA;
 }
 
-function calcTable(poke, levels, items, show, score) {
+function calcTable(poke, levels, items, parsed, score) {
 	var label = poke.name + ": " + items.join("/") + " @" + score;
 	var result = [label];
 
@@ -160,37 +230,41 @@ function calcTable(poke, levels, items, show, score) {
 					items[2][0], items[2][1], score);
 		champ.init();
 
-		if (show.contains("stats")) {
-			for (var s=0; s<Stats.LIST.length; s++) {
-				var stat = Stats.LIST[s];
-				r[stat] = champ.stats[stat];
-			}
+		for (var s=0; s<parsed.show.length; s++) {
+			var sh = parsed.show[s];
+			if (!isDefined(Calc.LIST[sh]))
+				throw("Unknown show type " + sh);
+			Calc.LIST[sh].recurse(r, champ, null, parsed);
 		}
-		if (show.contains("physhp"))
-			r.physph = calcEffectiveHP(champ.stats.health,
-						   champ.stats.defense);
-		if (show.contains("spechp"))
-			r.specph = calcEffectiveHP(champ.stats.health,
-						   champ.stats.spdefense);
+
 		result.push(r);
 	}
 	return result;
 }
 
-function calcTables(poke, levels, items, show) {
+function calcTables(poke, levels, items, parsed) {
 	var results = [];
 	var hints;
-	var scoreMax, i;
+	var scoreMax, scoreMin, i;
 
-	// Check hints
-	hints = poke.hints;
-	for (i=0; i<items.length; i++) 
-		hints |= Item.LIST[items[i][0]].hints;
-	scoreMax = (hints & HINT_SCORE) ? 6 : 0;
+	if (!parsed.scores) {
+		// Check hints
+		hints = poke.hints;
+		scoreMin = 0;
+		for (i=0; i<items.length; i++) 
+			hints |= Item.LIST[items[i][0]].hints;
+		scoreMax = (hints & HINT_SCORE) ? 6 : 0;
+	} else if (parsed.scores.length > 1) {
+		scoreMin = parsed.scores[0];
+		scoreMax = parsed.scores[1];
+	} else {
+		scoreMin = parsed.scores[0];
+		scoreMax = parsed.scores[0];
+	}
 
 	// XXX TODO Multiplex crits (none/expected/max)
-	for (i=0; i<=scoreMax; i++)
-		results.push(calcTable(poke, levels, items, show, i));
+	for (i=scoreMin; i<=scoreMax; i++)
+		results.push(calcTable(poke, levels, items, parsed, i));
 
 	return results;
 }
@@ -201,7 +275,7 @@ function createTables(parsed) {
 	if (!isDefined(parsed.pokemon))
 		throw("No Pokemon specified");
 	if (parsed.show.length == 0)
-		parsed.show = ["stats", "autos"];
+		parsed.show = ["stats"];
 	var levelList = (parsed.levels.length > 0 ? parsed.levels :
 					[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] );
 
@@ -348,9 +422,20 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 	for (i=0; i<iterItems.length; i++) {
 		var tbl = calcTables(poke, levelList,
 					iterItems[i],
-					parsed.show);
+					parsed);
 		for (t=0; t<tbl.length; t++)
 			tables.push(tbl[t]);
+	}
+
+	if (parsed.sort.length > 0) {
+		tables.sort(function(a,b) {
+				for (var s=0; s<parsed.sort.length; s++) {
+					var e = parsed.sort[s];
+					var cmp = (a[1][e] - b[1][e]);
+					if (cmp) return cmp;
+				}
+				return 0;
+			});
 	}
 
 	return tables;

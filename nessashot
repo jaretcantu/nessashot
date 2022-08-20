@@ -1,34 +1,41 @@
 #!/usr/bin/js
 /* nessashot
  * Commandline interface for Pokemon UNITE search and grapher
- * Copyright (C) 2021 Jaret Jay Cantu
+ * Copyright (C) 2021-2022 Jaret Jay Cantu
  * Licensed under the AGPL
  */
 load("nessashot.js");
+load("pokemon.js");
 load("search.js");
 
 function showHelp() {
 	print("nessashot {-h|--help}                     - Show this message");
-	print("nessashot [-s|--show stats,dps]            \\");
+	print("nessashot [-s|--show stats,dps,tankiness]  \\");
 	print("          [-l|--levels {#,#...|#-#}]       \\");
 	print("          [-m|--move 1|2|Name]             \\");
 	print("          [-i|--item Name(=Level)]         \\");
 	print("          [--itemlevel Name=Level]         \\");
 	print("          [--itemdefault Level]            \\");
+	print("          [--specperc %%]                  \\");
 	print("          [-o|--optimize items|itemlevels] \\");
+	print("          [-O|--sort show]                 \\");
+	print("          [-S|--score min,max|score]       \\");
 	print("          Pokemon                         - Show Pokemon chart");
 }
 
 function parseArgs(args) {
 	var opts = { h: "help", i: "item", l: "levels", m: "move",
-		     o: "optimize", s: "show" };
+		     o: "optimize", O: "sort", s: "show", S: "score" };
 	var parsed = {
 			levels: [],
 			moves: [],
 			items: [],
 			itemlevels: {},
 			itemdefault: 20,
+			scores: null,
 			show: [],
+			sort: [],
+			specialperc: 0.4,
 		};
 
 	for (var a=0; a<args.length; a++) {

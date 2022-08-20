@@ -1,6 +1,6 @@
 /* nessashot.js
  * Pokemon UNITE build simulator and comparer
- * Copyright (C) 2021 Jaret Jay Cantu
+ * Copyright (C) 2021-2022 Jaret Jay Cantu
  * Licensed under the AGPL
  */
 
@@ -19,10 +19,11 @@ Array.prototype.contains = function(e) {
 var HINT_CRIT	= 0x00000001;
 var HINT_SCORE	= 0x00000002;
 var HINT_PHYS	= 0x00000004;
+var HINT_SPEC	= 0x00000008;
 
 // non-class mathematic functions
 function damageReduction(d) {
-	return 600 / (600 + d);
+	return 600.0 / (600 + d);
 }
 
 function calcEffectiveHP(hp, def) {
