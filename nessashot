@@ -86,10 +86,10 @@ function parseArgs(args) {
 	return parsed;
 }
 
-if (arguments.length == 0) {
+if (scriptArgs.length == 0) {
 	showHelp();
 } else {
-	var tables = createTables(parseArgs(arguments));
+	var tables = createTables(parseArgs(scriptArgs));
 
 	for (var t=0; t<tables.length; t++) {
 		var tbl = tables[t];
