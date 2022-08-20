@@ -402,8 +402,44 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 			iterItems.push(set);
 		}
 	} else if (parsed.search == 'items') {
-		throw("Unimplemented");
 		// XXX TODO Don't use special items on physical 'Mons
+		var specItems = [];
+		var remItems = [];
+		// Remove empty placeholder
+		for (var j in Item.LIST)
+			if (j != '')
+				remItems.push(j);
+		for (i=0; i<parsed.items.length; i++) {
+			var lvl = parsed.itemlevels[parsed.items[i]];
+			specItems.push([parsed.items[i],
+					lvl ? lvl : parsed.itemdefault]);
+			// Remove specified items from the remaining list
+			INNER: for (j=0; j<remItems.length; j++) {
+				if (remItems[j] == parsed.items[i]) {
+					remItems.splice(j, 1);
+					break INNER;
+				}
+			}
+
+		}
+		
+		/* Permutate every possible item combination; can do so easily
+		 * by ensuring sets are made of remaining items a<b<c, where
+		 * a, b, and c are indeces to the remaining item array.
+		 */
+		var recursor = function(items, cnt) {
+			while (cnt < remItems.length) {
+				var newItems = items.slice();
+				newItems.push([remItems[cnt],
+						parsed.itemdefault]);
+				if (newItems.length == 3)
+					iterItems.push(newItems);
+				else
+					recursor(newItems, cnt+1);
+				cnt++;
+			}
+		};
+		recursor(specItems, 0);
 	} else { // no item search
 		var specItems = [];
 		for (i=0; i<parsed.items.length; i++) {
