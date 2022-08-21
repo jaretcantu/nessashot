@@ -50,6 +50,7 @@ Calc.LIST = {
 // generic interface functions
 
 function parseOption(parsed, arg, args, a) {
+	if (!isDefined(a)) a = 0;
 	var initialA = a;
 
 	switch (arg) {
@@ -281,7 +282,8 @@ function createTables(parsed) {
 		throw("No Pokemon specified");
 	if (parsed.show.length == 0)
 		parsed.show = ["stats"];
-	var levelList = (parsed.levels.length > 0 ? parsed.levels :
+	var levelList = (parsed.levels && parsed.levels.length > 0 ?
+					parsed.levels :
 					[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] );
 
 	var poke = Pokemon.LIST[parsed.pokemon];
@@ -459,7 +461,8 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 	}
 
 	// TODO Add emblem multiplex search, which will be enormous
-	var emblems = new EmblemPage(parsed.emblems);
+	var emblems = isDefined(parsed.emblems)
+			? new EmblemPage(parsed.emblems) : null;
 
 	// Multiplex search parameters (NB: More multiplexing based on hints)
 	var t, tables = [];
