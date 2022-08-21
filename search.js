@@ -222,8 +222,63 @@ function parseOption(parsed, arg, args, a) {
 	return a - initialA;
 }
 
+function getCommonLabels() {
+	/* This is a remarkably simple function since the possible common labels
+	 * must all be in the first dataset and get pruned from there.
+	 */
+	var common = {};
+	var initialize = true;
+	for (var a=0; a<arguments.length; a++) {
+		var dataset = arguments[a];
+		for (var i=0; i<dataset.length; i++) {
+			var labels = dataset[i][0];
+			var unseen = Object.keys(common);
+			for (var l=0; l<labels.length; l++) {
+				var label = labels[l];
+				if (initialize) {
+					// seed all labels as common
+					common[label] = true;
+				} else if (isDefined(common[label])) {
+					for (var r=0; r<unseen.length; r++) {
+						if (unseen[r] != label)
+							continue;
+						// Mark as seen
+						unseen.splice(r, 1);
+						break;
+					}
+					if (unseen.length == 0)
+						break; // saw everything
+				}
+			}
+			if (initialize) {
+				initialize = false;
+			} else if (unseen.length > 0) {
+				// mark labels as no longer common
+				for (var u=0; u<unseen.length; u++)
+					delete(common[unseen[u]]);
+				// If nothing is left, abort
+				if (Object.keys(common).length == 0)
+					return [];
+			}
+		}
+	}
+	return Object.keys(common);
+}
+
+function removeCommonLabels(label0, common) {
+	var label = label0.slice(); // copy
+	for (var l=0; l<label.length; ) {
+		if (common.contains(label[l])) {
+			label.splice(l, 1);
+		} else {
+			l++;
+		}
+	}
+	return label;
+}
+
 function calcTable(poke, levels, items, parsed, score, emblems) {
-	var label = poke.name + ": " + items.join("/") + " @" + score;
+	var label = [poke.name, items.join("/"), 'Score='+score];
 	var result = [label];
 
 	// TODO Determine show actions
@@ -436,7 +491,7 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 		 */
 		var recursor = function(items, cnt) {
 			while (cnt < remItems.length) {
-				var newItems = items.slice();
+				var newItems = items.slice(); // copy
 				newItems.push([remItems[cnt],
 						parsed.itemdefault]);
 				if (newItems.length == 3)

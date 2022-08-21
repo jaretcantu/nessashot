@@ -92,11 +92,13 @@ if (scriptArgs.length == 0) {
 	showHelp();
 } else {
 	var tables = createTables(parseArgs(scriptArgs));
+	var common = getCommonLabels(tables);
 
 	for (var t=0; t<tables.length; t++) {
 		var tbl = tables[t];
 		for (var e in tbl[1]) {
-			var str = tbl[0] + "@" + e + ": ";
+			var str = removeCommonLabels(tbl[0], common).join(' ') +
+				  "@" + e + ": ";
 			for (var l=1; l<tbl.length; l++) {
 				if (l>1) str+= ',';
 				str+= tbl[l][e];
