@@ -171,6 +171,10 @@ function parseOption(parsed, arg, args, a) {
 		}
 		parsed.moves.push(arg);
 		break;
+	case 'emblem':
+		arg = args[++a];
+		parsed.emblems.push(arg);
+		break;
 	case 'optimize':
 		if (isDefined(parsed.search)) {
 			throw("Already optimizing " + parsed.search +
@@ -217,7 +221,7 @@ function parseOption(parsed, arg, args, a) {
 	return a - initialA;
 }
 
-function calcTable(poke, levels, items, parsed, score) {
+function calcTable(poke, levels, items, parsed, score, emblems) {
 	var label = poke.name + ": " + items.join("/") + " @" + score;
 	var result = [label];
 
@@ -227,7 +231,8 @@ function calcTable(poke, levels, items, parsed, score) {
 		var champ = new Champion(poke, levels[l],
 					items[0][0], items[0][1],
 					items[1][0], items[1][1],
-					items[2][0], items[2][1], score);
+					items[2][0], items[2][1],
+					score, emblems);
 		champ.init();
 
 		for (var s=0; s<parsed.show.length; s++) {
@@ -242,7 +247,7 @@ function calcTable(poke, levels, items, parsed, score) {
 	return result;
 }
 
-function calcTables(poke, levels, items, parsed) {
+function calcTables(poke, levels, items, emblems, parsed) {
 	var results = [];
 	var hints;
 	var scoreMax, scoreMin, i;
@@ -264,7 +269,7 @@ function calcTables(poke, levels, items, parsed) {
 
 	// XXX TODO Multiplex crits (none/expected/max)
 	for (i=scoreMin; i<=scoreMax; i++)
-		results.push(calcTable(poke, levels, items, parsed, i));
+		results.push(calcTable(poke, levels, items, parsed, i,emblems));
 
 	return results;
 }
@@ -453,11 +458,15 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 		iterItems.push(specItems);
 	}
 
+	// TODO Add emblem multiplex search, which will be enormous
+	var emblems = new EmblemPage(parsed.emblems);
+
 	// Multiplex search parameters (NB: More multiplexing based on hints)
 	var t, tables = [];
 	for (i=0; i<iterItems.length; i++) {
 		var tbl = calcTables(poke, levelList,
 					iterItems[i],
+					emblems,
 					parsed);
 		for (t=0; t<tbl.length; t++)
 			tables.push(tbl[t]);

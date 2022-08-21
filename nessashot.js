@@ -917,6 +917,83 @@ Item.LIST = {
 		], [0.03, 0.05, 0.07], new PercentItemPassive("spattack")),
 };
 
+function EmblemColor(stat, r1, b1, r2, b2, r3, b3) {
+	this.stat = stat;
+	this.requirement = [r1, r2, r3];
+	this.bonus = [b1, b2, b3];
+}
+EmblemColor.prototype.getBonus = function(count) {
+	for (var i=this.bonus.length-1; i>=0; i--) {
+		if (count >= this.requirement[i])
+			return this.bonus[i];
+	}
+	return 0;
+}
+
+function Emblem(color, rank, bonus, penalty) {
+	this.color = color;
+	this.rank = Emblem.RANKS[rank];
+	this.bonus = bonus;
+	this.penalty = penalty;
+}
+Emblem.RANKS = {Bronze:0, Silver:1, Gold:2};
+Emblem.STATS = [ new Stats(30, 1,   3, 1.5, 3, 0.6, 0,0,0,0,0,0, 21),
+		 new Stats(40, 1.5, 4, 2.5, 4, 0.8, 0,0,0,0,0,0, 28),
+		 new Stats(50, 2,   5, 3,   5, 1,   0,0,0,0,0,0, 35) ];
+Emblem.COLORS = {
+		Black: new EmblemColor('cdr', 3, 0.02, 5, 0.04, 7, 0.06),
+		Blue: new EmblemColor('defense', 2, 0.02, 4, 0.04, 6, 0.08),
+		Brown: new EmblemColor('attack', 2, 0.01, 4, 0.02, 6, 0.04),
+		Green: new EmblemColor('spattack', 2, 0.01, 4, 0.02, 6, 0.04),
+		Pink: new EmblemColor('tenacity', 3, 0.04, 5, 0.08, 7, 0.16),
+		Purple: new EmblemColor('spdefense', 2, 0.02, 4, 0.04, 6, 0.08),
+		Red: new EmblemColor('aps', 3, 0.02, 5, 0.04, 7, 0.08),
+		White: new EmblemColor('health', 2, 0.01, 4, 0.02, 6, 0.04),
+		Yellow: new EmblemColor('movement', 3, 0.04, 5, 0.06, 7, 0.12),
+	};
+
+function EmblemPage(args) {
+	if (isDefined(args.length)) { // is array (or arguments)
+		this.colors = {};
+		this.stats = new Stats();
+		for (var i=0; i<args.length; i++) {
+			var a = args[i];
+			if (a instanceof Emblem) {
+				this.colors[a.color]++;
+				if (a.bonus)
+					this.stats[a.bonus]+=
+						Emblem.STATS[a.rank][a.bonus];
+				if (a.penalty)
+					this.stats[a.penalty]-=
+						Emblem.STATS[a.rank][a.penalty];
+			} else {
+				// For text input
+				var pair = a.split('=');
+				var col = pair[0].charAt(0).toUpperCase() +
+					  pair[0].substring(1).toLowerCase();
+				if (isDefined(Emblem.COLORS[col])) {
+					if (!isDefined(this.colors[col]))
+						this.colors[col] = 0;
+					this.colors[col]+= Number(pair[1]);
+				} else {
+					this.stats[pair[0]]+= Number(pair[1]);
+				}
+			}
+		}
+	} else {
+		EmblemPage.call(this, arguments); // treat arg list as array
+	}
+}
+EmblemPage.prototype.addStats = function(poke) {
+	var baseStats = poke.pokemon.progression[poke.level-1];
+	for (var c in this.colors) {
+		var col = Emblem.COLORS[c];
+		poke.stats[col.stat]+= baseStats[col.stat] *
+				      col.getBonus(this.colors[c]);
+	}
+	poke.stats.add(this.stats);
+}
+
 function LearnSet(level, upgrade, moves) {
 	this.level = level;
 	this.upgrade = upgrade;
@@ -986,11 +1063,13 @@ ItemState.prototype.addStats = function(stats) {
 	stats.add(this.item.progression[this.level-1]);
 }
 
-function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3, score){
+function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3, score,
+		  emblems) {
 	this.pokemon = typeof(poke) === 'string' ? Pokemon.LIST[poke] : poke;
 	this.level = level;
 	this.stats = new Stats(this.pokemon.progression[this.level-1]);
 	this.scores = score;
+	this.emblems = emblems;
 	this.boostedCounter = 0;
 	// Don't bother sorting items here; sort them when running longterm sims
 	this.items = [	new ItemState(item1, ilev1),
@@ -998,6 +1077,8 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3, score){
 			new ItemState(item3, ilev3) ];
 	// Create easy hints reference so we don't have to recurse every access
 	this.hints = this.pokemon.hints;
+	if (this.emblems)
+		this.emblems.addStats(this);
 	for (var i=0; i<this.items.length; i++) {
 		this.hints|= this.items[i].item.hints;
 		this.items[i].addStats(this.stats);

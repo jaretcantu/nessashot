@@ -13,6 +13,7 @@ function showHelp() {
 	print("nessashot [-s|--show stats,dps,tankiness]  \\");
 	print("          [-l|--levels {#,#...|#-#}]       \\");
 	print("          [-m|--move 1|2|Name]             \\");
+	print("          [-e|--emblem {color=#|stat=#}]   \\");
 	print("          [-i|--item Name(=Level)]         \\");
 	print("          [--itemlevel Name=Level]         \\");
 	print("          [--itemdefault Level]            \\");
@@ -24,11 +25,12 @@ function showHelp() {
 }
 
 function parseArgs(args) {
-	var opts = { h: "help", i: "item", l: "levels", m: "move",
+	var opts = { h: "help", e: "emblem", i: "item", l: "levels", m: "move",
 		     o: "optimize", O: "sort", s: "show", S: "score" };
 	var parsed = {
 			levels: [],
 			moves: [],
+			emblems: [],
 			items: [],
 			itemlevels: {},
 			itemdefault: 30,
