@@ -44,6 +44,17 @@ Calc.LIST = {
 			r.tankiness = r.physhp * (1-p.specialperc) +
 				      r.spechp * p.specialperc;
 		}),
+	"dumbdmg": new Calc("dumbdmg", [],
+		function(r, champ, enemy, p) {
+			var total = 0;
+			var ms = champ.pokemon.moveset;
+			for (var m in ms) {
+				if (isDefined(ms[m].calc))
+					total+= ms[m].calc(champ);
+			}
+			// TODO Calc boosted attacks better
+			r.dumbdmg = total;
+		}),
 };
 
 

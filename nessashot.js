@@ -233,6 +233,12 @@ function HealthModMove(name, pmux, smux, lev, flat, cd) {
 }
 HealthModMove.prototype = new Move();
 HealthModMove.prototype.constructor = HealthModMove;
+HealthModMove.prototype.calc = function(pkmn) {
+	return	this.physMultiplier * pkmn.stats.attack +
+		this.specMultiplier * pkmn.stats.spattack +
+		this.levelScaling * (pkmn.level-1) +
+		this.baseDamage;
+}
 
 function DamagingMove(name, pmux, smux, lev, flat, cd) {
 	if (arguments.length == 0) return;
