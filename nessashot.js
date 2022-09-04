@@ -71,6 +71,20 @@ Stats.LIST = ["health", "attack", "defense", "spattack", "spdefense",
 		"charge", "movement",
 		// Stats that are probably outside of progression and item only
 		"critdamage", "recovery"];
+Stats.prototype.toString = function() {
+	var str = "Stats(";
+	var something = false;
+	for (var i=0; i<Stats.LIST.length; i++) {
+		var s = Stats.LIST[i];
+		if (this[s] != 0) {
+			if (something)
+				str+= ", ";
+			str+= s + "=" + this[s];
+			something = true;
+		}
+	}
+	return str + ")";
+}
 Stats.prototype.add = function(addend) {
 	for (var i=0; i<Stats.LIST.length; i++) {
 		var s = Stats.LIST[i];
