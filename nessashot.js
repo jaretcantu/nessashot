@@ -190,6 +190,9 @@ Move.prototype.setBoost = function() {
 	this.resetsBoosted = true;
 	return this;
 }
+Move.prototype.calc = function(pkmn) {
+	return 0;
+}
 
 function ComboMove(name, cd, moves) {
 	if (arguments.length == 0) return;
@@ -206,6 +209,13 @@ function ComboMove(name, cd, moves) {
 }
 ComboMove.prototype = new Move();
 ComboMove.prototype.constructor = ComboMove;
+ComboMove.prototype.calc = function(pkmn) {
+	var total = 0;
+	for (var m=0; m<this.moves.length; m++) {
+		total+= this.moves[m].calc(pkmn);
+	}
+	return total;
+}
 
 function StatusMove(name, dur, stats, cd) {
 	if (arguments.length == 0) return;
