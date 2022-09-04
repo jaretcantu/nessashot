@@ -18,6 +18,7 @@ function showHelp() {
 	print("          [--itemlevel Name=Level]         \\");
 	print("          [--itemdefault Level]            \\");
 	print("          [--specperc %%]                  \\");
+	print("          [-c|--crit (min|avg|max)]        \\");
 	print("          [-o|--optimize items|itemlevels] \\");
 	print("          [-O|--sort show]                 \\");
 	print("          [-S|--score min,max|score]       \\");
@@ -25,8 +26,9 @@ function showHelp() {
 }
 
 function parseArgs(args) {
-	var opts = { h: "help", e: "emblem", i: "item", l: "levels", m: "move",
-		     o: "optimize", O: "sort", s: "show", S: "score" };
+	var opts = { h: "help", c: "crit", e: "emblem", i: "item", l: "levels",
+		     m: "move", o: "optimize", O: "sort", s: "show",
+		     S: "score" };
 	var parsed = {
 			levels: [],
 			moves: [],
@@ -34,6 +36,7 @@ function parseArgs(args) {
 			items: [],
 			itemlevels: {},
 			itemdefault: 30,
+			crit: ['avg'],
 			scores: null,
 			show: [],
 			sort: [],

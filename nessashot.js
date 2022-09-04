@@ -193,6 +193,9 @@ Move.prototype.setBoost = function() {
 Move.prototype.calc = function(pkmn) {
 	return 0;
 }
+Move.prototype.canCrit = function() {
+	return false;
+}
 
 function ComboMove(name, cd, moves) {
 	if (arguments.length == 0) return;
@@ -253,9 +256,15 @@ HealthModMove.prototype.calc = function(pkmn) {
 function DamagingMove(name, pmux, smux, lev, flat, cd) {
 	if (arguments.length == 0) return;
 	HealthModMove.apply(this, arguments);
+	this.crittable = false;
 }
 DamagingMove.prototype = new HealthModMove();
 DamagingMove.prototype.constructor = DamagingMove;
+DamagingMove.prototype.setCrit = function() {
+	this.crittable = 1;
+	return this;
+}
+DamagingMove.prototype.canCrit = function() { return this.crittable; }
 
 function HealingMove(name, pmux, smux, lev, flat, cd) {
 	if (arguments.length == 0) return;
@@ -264,7 +273,7 @@ function HealingMove(name, pmux, smux, lev, flat, cd) {
 HealingMove.prototype = new HealthModMove();
 HealingMove.prototype.constructor = HealingMove;
 
-Move.BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0);
+Move.BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0).setCrit();
 
 function Item(name, prog, unlocks, passive) {
 	if (arguments.length == 0) return;
@@ -1079,14 +1088,28 @@ ItemState.prototype.addStats = function(stats) {
 	stats.add(this.item.progression[this.level-1]);
 }
 
-function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3, score,
-		  emblems) {
+function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
+		  moveFirst, move1, move2, score, emblems) {
 	this.pokemon = typeof(poke) === 'string' ? Pokemon.LIST[poke] : poke;
 	this.level = level;
 	this.stats = new Stats(this.pokemon.progression[this.level-1]);
 	this.scores = score;
 	this.emblems = emblems;
 	this.boostedCounter = 0;
+	this.moves = [];
+	if (this.level < 3) {
+		this.moves.push(this.pokemon.learnset[moveFirst].moves[0]);
+	} else {
+		for (var m=0; m<2; m++) {
+			var ls = this.pokemon.learnset[m];
+			if (this.level >= this.upgrade)
+				this.moves.push(ls.moves[2]);
+			else if (this.level >= this.level)
+				this.moves.push(ls.moves[1]);
+			else
+				this.moves.push(ls.moves[0]);
+		}
+	}
 	// Don't bother sorting items here; sort them when running longterm sims
 	this.items = [	new ItemState(item1, ilev1),
 			new ItemState(item2, ilev2),

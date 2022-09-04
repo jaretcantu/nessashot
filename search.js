@@ -24,6 +24,31 @@ Calc.prototype.recurse = function(r, champ, enemy, param) {
 
 	this.calculate(r, champ, enemy, param);
 }
+Calc.critCalc = function(r, champ, lbl, mv, enemy, param) {
+	// common way of adding all crit rates
+	var dmg = mv.calc(champ);
+	if (!isDefined(param.crit) || !mv.canCrit()) {
+		r[lbl] = dmg;
+		console.log("No crit: " +mv.canCrit());
+		return;
+	}
+	for (var c=0; c<param.crit.length; c++) {
+		var sfx = param.crit[c];
+		switch (sfx) {
+		case 'nc': // no crit
+			r[lbl + sfx] = dmg;
+			break;
+		case 'fc': // full crit
+			r[lbl + sfx] = dmg * (1 + champ.stats.critdamage);
+			break;
+		default:
+			r[lbl + sfx] = dmg * ((1 - champ.stats.critrate) +
+					(champ.stats.critrate *
+					 (1 + champ.stats.critdamage)));
+			
+		}
+	}
+}
 Calc.LIST = {
 	"stats": new Calc("stats", [], function(r, champ, enemy, p) {
 			for (var s=0; s<Stats.LIST.length; s++) {
@@ -54,6 +79,22 @@ Calc.LIST = {
 			}
 			// TODO Calc boosted attacks better
 			r.dumbdmg = total;
+		}),
+	"boosted": new Calc("boosted", [],
+		function(r, champ, enemy, p) {
+			Calc.critCalc(r, champ, 'boosted',
+				champ.pokemon.moveset.Boosted,
+				enemy, p);
+		}),
+	"move1": new Calc("move1", [],
+		function(r, champ, enemy, p) {
+			Calc.critCalc(r, champ, 'move1', champ.moves[0],
+				enemy, p);
+		}),
+	"move2": new Calc("move2", [],
+		function(r, champ, enemy, p) {
+			Calc.critCalc(r, champ, 'move2', champ.moves[1],
+				enemy, p);
 		}),
 };
 
@@ -183,6 +224,33 @@ function parseOption(parsed, arg, args, a) {
 		}
 		parsed.moves.push(arg);
 		break;
+	case 'crit':
+		arg = args[++a].split(',');
+		for (var c=0; c<arg.length; c++) {
+			var cc = arg[c];
+			switch (cc) {
+			case 'floor':
+			case 'min':
+				cc = 'nc';
+			case 'nc': // no crit
+				break;
+			case 'ceil':
+			case 'max':
+				cc = 'fc';
+			case 'fc': // full crit
+				break;
+			case 'average':
+			case 'avg':
+				cc = '';
+			case '': // expected crit rate over time
+				break;
+			default:
+				throw('Unknown crit specifier: ' + cc);
+			}
+			arg[c] = cc;
+		}
+		parsed.crit = arg;
+		break;
 	case 'emblem':
 		arg = args[++a];
 		parsed.emblems.push(arg);
@@ -288,7 +356,7 @@ function removeCommonLabels(label0, common) {
 	return label;
 }
 
-function calcTable(poke, levels, items, parsed, score, emblems) {
+function calcTable(poke, levels, items, parsed, score, emblems, moves) {
 	var label = [poke.name, items.join("/"), 'Score='+score];
 	var result = [label];
 
@@ -299,6 +367,7 @@ function calcTable(poke, levels, items, parsed, score, emblems) {
 					items[0][0], items[0][1],
 					items[1][0], items[1][1],
 					items[2][0], items[2][1],
+					0, moves[0], moves[1],
 					score, emblems);
 		champ.init();
 
@@ -314,7 +383,7 @@ function calcTable(poke, levels, items, parsed, score, emblems) {
 	return result;
 }
 
-function calcTables(poke, levels, items, emblems, parsed) {
+function calcTables(poke, levels, items, emblems, moves, parsed) {
 	var results = [];
 	var hints;
 	var scoreMax, scoreMin, i;
@@ -334,9 +403,9 @@ function calcTables(poke, levels, items, emblems, parsed) {
 		scoreMax = parsed.scores[0];
 	}
 
-	// XXX TODO Multiplex crits (none/expected/max)
 	for (i=scoreMin; i<=scoreMax; i++)
-		results.push(calcTable(poke, levels, items, parsed, i,emblems));
+		results.push(calcTable(poke, levels, items, parsed, i, emblems,
+				       moves));
 
 	return results;
 }
@@ -389,7 +458,7 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 	// Iterate all learnsets when unspecified
 	for (i=0; i<2; i++)
 		if (!isDefined(iterMoves[i]))
-			iterMoves[i] = [1, 2];
+			iterMoves[i] = [1]; // default to just the first move
 
 	// fill out specified items
 	var iterItems = []; // array of triples of pairs
@@ -526,19 +595,40 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 		iterItems.push(specItems);
 	}
 
-	// TODO Add emblem multiplex search, which will be enormous
-	var emblems = isDefined(parsed.emblems)
-			? new EmblemPage(parsed.emblems) : null;
+	/* TODO Add emblem multiplex search, which will be enormous.
+	 *	To save time, instead of the item combination search, use a
+	 *	Emblem/Amount search. This prevents one type of emblem from
+	 *	being used in small amounts a number of times (so for four of
+	 *	the same emblem: XOOO, OXOO, etc).
+	 *	The search would iterate each unique emblem the same as the
+	 *	item search (expanding from an array index), but it would also
+	 *	iterate each possible count of the unique emblem -- up to ten --
+	 *	to prevent duplicate amounts from being searched in the future.
+	 */
+	var iterEmblems = [];
+	if (parsed.search == 'emblems') {
+		throw("Emblem search is not yet implemented");
+	} else { // no emblem search
+		iterEmblems.push(isDefined(parsed.emblems)
+			? new EmblemPage(parsed.emblems) : null);
+	}
 
 	// Multiplex search parameters (NB: More multiplexing based on hints)
 	var t, tables = [];
+	for (var e=0; e<iterEmblems.length; e++) {
+	for (var m1=0; m1<iterMoves[0].length; m1++) {
+	for (var m2=0; m2<iterMoves[1].length; m2++) {
 	for (i=0; i<iterItems.length; i++) {
 		var tbl = calcTables(poke, levelList,
 					iterItems[i],
-					emblems,
+					iterEmblems[e],
+					[iterMoves[0][m1-1],iterMoves[1][m2-1]],
 					parsed);
 		for (t=0; t<tbl.length; t++)
 			tables.push(tbl[t]);
+	}
+	}
+	}
 	}
 
 	if (parsed.sort.length > 0) {
