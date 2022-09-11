@@ -91,6 +91,7 @@ var MAPPING = {
 		upgrade2b: 'skills[3].upgrades[1].rsb',
 		upgrade2bcd: 'skills[3].upgrades[1].cd1',
 		unite: 'skills[4].rsb',
+		uniteat: 'skills[4].level',
 		unitecd: 'skills[4].cd',
 	};
 // Simple list for iterating all moves
@@ -286,22 +287,19 @@ function run(args) {
 			prindent("\t\t\t", funcSub(rfunc, c.learnset[0]));
 		}
 		print("\t\t}, " +
-		      fallback(c.boostedproc, "BoostedProc.EVERY_3RD") + ", " +
-		      fallback(c.learnat1, 4) + ", " +
-		      fallback(c.upgradeat1, 11) + ", [");
+		      fallback(c.boostedproc, "BoostedProc.EVERY_3RD") +
+		      funcSub(rfunc, ", $learnat1, $upgradeat1, ["));
 		// three moves: initial, two choices
 		if (typeof(c.learnset) === 'undefined' || c.learnset.length<2) {
 		} else {
 			prindent("\t\t\t", funcSub(rfunc, c.learnset[1]));
 		}
-		print("\t\t], " +
-		      fallback(c.learnat2, 4) + ", " +
-		      fallback(c.upgradeat2, 11) + ", [");
+		print(funcSub(rfunc, "\t\t], $learnat2, $upgradeat2, ["));
 		// other three moves: initial, two choices
 		if (typeof(c.learnset) !== 'undefined' && c.learnset.length>=3)
 			prindent("\t\t\t", funcSub(rfunc,c.learnset[2]));
 		// Unite move
-		print("\t\t], " + fallback(c.uniteat, 9) + ",");
+		print(funcSub(rfunc, "\t\t], $uniteat,"));
 		prindent("\t\t",
 			 fallback(c.learnset && funcSub(rfunc, c.learnset[3]),
 				 'null') + ",");
