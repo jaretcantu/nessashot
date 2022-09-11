@@ -1,0 +1,20 @@
+#!/bin/sh
+
+ver=${1?:You must specify a version}
+
+for j in emblems pokemon stats
+do
+	json=${j}.json
+	njson=${json}.$ver
+	if ! test -e $njson
+	then
+		echo "Could not find $njson" >&2
+		exit 1
+	fi
+	if test -e $json && ! test -L $json
+	then
+		echo "Refusing to replace real file $json" >&2
+		exit 1
+	fi
+	ln -nfs $njson $json
+done
