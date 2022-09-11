@@ -160,7 +160,7 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 		// Remove most non-alphanumeric chars from label;
 		// Keep parenths as they are often informative
 		lbl = lbl.replaceAll(/[- ]/g, '');
-		var rt = $(m,pfx+'ratio');
+		var rt = $(m,pfx+'ratio') / 100;
 		var q = (lbl.match(/\W/) ? '"' : '');
 		var cd = 0;
 		if (pr == 0) {
