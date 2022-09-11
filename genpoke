@@ -125,15 +125,17 @@ function $(json, key) {
 	return json[key] || 0; // can also easily ensure non-empty return
 }
 
-function getMoveFromJson(pad, p,rfunc, move) {
+function getMoveFromJson(pad, p,c, rfunc, move) {
 	// This function is largely here because the indention was too much
 	var ppn = '$' + move;
 	var m = rfunc(ppn);
 	m.PPN = ppn; // for preprocessing
 	if (!m) return;
-	var nam = m['name'];
+	var nam = m.name;
 	if (!nam) return;
 	var enh = false;
+	var hpComps = [ [] ];
+	var hpComp = hpComps[0];
 	for (var pr=0;; pr++) {
 		var pfx = (enh ? 'enhanced_' : '') + (pr ? 'add'+pr+'_' : '');
 		var lbl = m[pfx + 'label'];
@@ -143,6 +145,8 @@ function getMoveFromJson(pad, p,rfunc, move) {
 			// check for enhanced version
 			pr = -1; // start at 0 on next
 			enh = true;
+			hpComps.push([]);
+			hpComp = hpComps[1];
 			nam+= '+';
 			continue;
 		} else if (lbl=='Damage - Boosted') {
@@ -181,7 +185,48 @@ function getMoveFromJson(pad, p,rfunc, move) {
 		      (p.damage_type == 'Physical' ?  rt + ",0" : "0," + rt) +
 		      ", " + $(m,pfx+'slider') + ", " + $(m,pfx+'base') +
 		      ", " + cd + "),");
+		hpComp.push(lbl);
 	}
+
+	// Fill the learnset with default ComboMoves of all damage values
+	var mi = 1+Math.floor((ALL_MOVES.indexOf(move)-1)/3);
+	if (mi < 0) return; // only care about real moves
+
+	var ls = '';
+	for (var hpc=0; hpc<hpComps.length; hpc++) {
+		hpComp = hpComps[hpc];
+		switch (hpComp.length) {
+		case 1:
+			if (ls != '') ls+= ', ';
+			ls+= '"' + hpComp[0] + '"';
+			break;
+		case 0:
+			if (hpc != 0) {
+				if (hpc == 1 && move.match(/^upgrade/))
+					ls+= ', null';
+				break;
+			}
+			// fallthrough and make dummy move as a placeholder
+		default:
+			if (ls != '') ls+= ', ';
+			ls+= 'new ComboMove("' + m.name.replaceAll(/[- ]/g, '')+
+				(hpc>0 ? '+' : '') +
+				'", ' + ppn + 'cd, [';
+			for (var h=0; h<hpComp.length; h++) {
+				if (h>0) ls+= ', ';
+				ls+= '"' + hpComp[h] + '"';
+			}
+			ls+= '])';
+		}
+	}
+	if (typeof(c.learnset) === 'undefined')
+		c.learnset = [];
+	else if (typeof(c.learnset[mi]) === 'undefined')
+		c.learnset[mi] = '';
+	else if (c.learnset[mi] != '')
+		c.learnset[mi]+= ', ';
+		
+	c.learnset[mi]+= ls;
 }
 
 // main function
@@ -281,7 +326,7 @@ function run(args) {
 			// Initialize a new Pokemon with all possible damage
 			// values that can be found in the JSON.
 			for (var i=0; i<ALL_MOVES.length; i++) {
-				getMoveFromJson(pad, p,rfunc, ALL_MOVES[i]);
+				getMoveFromJson(pad, p,c,rfunc, ALL_MOVES[i]);
 			}
 		} else {
 			prindent("\t\t\t", funcSub(rfunc, c.learnset[0]));
