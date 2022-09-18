@@ -80,6 +80,12 @@ Calc.LIST = {
 			// TODO Calc boosted attacks better
 			r.dumbdmg = total;
 		}),
+	"basic": new Calc("basic", [],
+		function(r, champ, enemy, p) {
+			Calc.critCalc(r, champ, 'basic',
+				champ.pokemon.moveset.Basic,
+				enemy, p);
+		}),
 	"boosted": new Calc("boosted", [],
 		function(r, champ, enemy, p) {
 			Calc.critCalc(r, champ, 'boosted',
@@ -101,6 +107,13 @@ Calc.LIST = {
 					enemy, p);
 			else
 				r.move2 = 0;
+		}),
+	"instant": new Calc("instant", ["basic", "boosted", "move1", "move2"],
+		// Differs from burst damage in that it is untimed.
+		// This is useful for increasing the damage of a moveset but
+		// not for comparing the damages of two different movesets.
+		function(r, champ, enemy, p) {
+			r.instant = r.basic+r.boosted+r.move1+r.move2;
 		}),
 };
 
