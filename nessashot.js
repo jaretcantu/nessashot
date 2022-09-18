@@ -196,6 +196,9 @@ function Move(name, cd) {
 	this.storedUses = 1;
 	this.resetsBoosted = false;
 }
+Move.prototype.toString = function() {
+	return "Move(" + this.name + ")";
+}
 Move.prototype.setStore = function(u) {
 	this.storedUses = u;
 	return this;
