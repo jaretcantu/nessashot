@@ -88,13 +88,19 @@ Calc.LIST = {
 		}),
 	"move1": new Calc("move1", [],
 		function(r, champ, enemy, p) {
+			// A Pokemon will always have at least one move.
 			Calc.critCalc(r, champ, 'move1', champ.moves[0],
 				enemy, p);
 		}),
 	"move2": new Calc("move2", [],
 		function(r, champ, enemy, p) {
-			Calc.critCalc(r, champ, 'move2', champ.moves[1],
-				enemy, p);
+			// A Pokemon will always learn its first move in slot 0,
+			// regardless of whether it is R or ZR.
+			if (champ.moves.length >= 2)
+				Calc.critCalc(r, champ, 'move2', champ.moves[1],
+					enemy, p);
+			else
+				r.move2 = 0;
 		}),
 };
 
