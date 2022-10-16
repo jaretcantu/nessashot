@@ -321,7 +321,7 @@ function run(args) {
 				lvl.attack + ", " + lvl.defense + ", " +
 				lvl.sp_attack + ", " + lvl.sp_defense + ", " +
 				(lvl.crit/100.0) + ", " +
-				((90+lvl.attack_speed)/100.0) + ", " +
+				(lvl.attack_speed) + ", " +
 				(lvl.cdr/100.0) + ", " +
 				(lvl.lifesteal/100.0) +
 				", 0,0),"); // spellvamp and tenacity
