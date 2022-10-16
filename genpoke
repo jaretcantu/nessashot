@@ -128,7 +128,15 @@ function $(json, key) {
 function getMoveFromJson(pad, p,c, rfunc, move) {
 	// This function is largely here because the indention was too much
 	var ppn = '$' + move;
-	var m = rfunc(ppn);
+	var m;
+	try {
+		m = rfunc(ppn);
+	} catch(e) {
+		// This might be because a Pokemon only has one possible upgrade
+		if (move.match(/^upgrade.b$/))
+			return;
+		throw(e); // continue with the error
+	}
 	m.PPN = ppn; // for preprocessing
 	if (!m) return;
 	var nam = m.name;
