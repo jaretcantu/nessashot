@@ -107,12 +107,21 @@ Calc.LIST = {
 			else
 				r.move2 = 0;
 		}),
-	"instant": new Calc("instant", ["basic", "boosted", "move1", "move2"],
+	"itemdmg": new Calc("itemdmg", [],
+		function(r, champ, enemy, p) {
+			var total = 0;
+			for (var i=0; i<champ.items.length; i++) {
+				total+= champ.items[i].item.calc(champ);
+			}
+			r.itemdmg = total;
+		}),
+	"instant": new Calc("instant", ["basic", "boosted", "move1", "move2",
+					"itemdmg"],
 		// Differs from burst damage in that it is untimed.
 		// This is useful for increasing the damage of a moveset but
 		// not for comparing the damages of two different movesets.
 		function(r, champ, enemy, p) {
-			r.instant = r.basic+r.boosted+r.move1+r.move2;
+			r.instant = r.basic+r.boosted+r.move1+r.move2+r.itemdmg;
 		}),
 };
 

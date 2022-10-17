@@ -98,10 +98,20 @@ function Passive(proc, func) {
 	this.func = func;
 }
 Passive.DUMMY = new Passive(0, null); // never procs
-Passive.INIT = 1;
+Passive.INIT	= 0x0001;
+Passive.BASIC	= 0x0002;
+Passive.COOLDOWN =0x0004;
+Passive.MOVE	= 0x0006;
+Passive.CRIT	= 0x0008;
+Passive.prototype.checkCondition = function(type, poke, item, foe) {
+	return (type & this.condition);
+}
 Passive.prototype.proc = function(type, poke, item, foe) {
-	if (type == this.condition)
+	if (this.checkCondition(type, poke, item, foe))
 		this.func(poke, item, foe);
+}
+Passive.prototype.calc = function(pkmn) {
+	return 0;
 }
 
 function StatPassive(proc, statf) {
@@ -136,6 +146,70 @@ PercentItemPassive.prototype.multiplier = function(poke, item, foe) {
 	/* Add the base Pokemon's stat at a given level */
 	return new Stats(this.stat, item.unlock *
 			  poke.pokemon.progression[poke.level-1][this.stat]);
+}
+
+function TimedItemPassive(cond, func, time) {
+	Passive.call(this, Passive.INIT, this.multiplier);
+	this.time = time;
+}
+TimedItemPassive.prototype = new Passive();
+TimedItemPassive.prototype.constructor = TimedItemPassive;
+TimedItemPassive.prototype.checkCondition = function(cond, pkmn, item, foe) {
+	if (this.time == 0) // XXX Check against ItemState.cooldown
+		return false;
+	// Run standard condition check
+	if (!Passive.call(Passive.prototype.checkCondition,
+			  cond, pkmn, item, foe))
+		return false;
+	// Reset timer now that the parent condition has been satisfied
+	// XXX TODO Reset timer here
+	return true;
+}
+
+function MoveItemPassive(cond) {
+	TimedItemPassive.call(this, cond, MoveItemPassive.useMove, 0);
+}
+MoveItemPassive.prototype = new TimedItemPassive();
+MoveItemPassive.prototype.constructor = MoveItemPassive;
+MoveItemPassive.useMove = function(pkmn, item, foe) {
+	// Execute a move-like effect
+	// XXX TODO Determine if movelike is offensive or defensive
+}
+MoveItemPassive.prototype.getItemState = function(pkmn) {
+	for (var i=0; i<pkmn.items.length; i++) {
+		var is = pkmn.items[i];
+		if (is.item.passive == this)
+			return is;
+	}
+	throw("Could not find item state for " + this);
+}
+MoveItemPassive.prototype.getMove = function(pkmn) {
+	// Normally, the item state is passed in through proc()
+	return this.getItemState(pkmn).unlock;
+}
+MoveItemPassive.prototype.calc = function(pkmn) {
+	return this.getMove(pkmn).calc(pkmn);
+}
+
+function BasicMoveItemPassive() {
+	MoveItemPassive.call(this, Passive.BASIC);
+}
+BasicMoveItemPassive.prototype = new MoveItemPassive();
+BasicMoveItemPassive.prototype.constructor = BasicMoveItemPassive;
+BasicMoveItemPassive.prototype.calc = function(pkmn) {
+	return this.getMove(pkmn).calc(pkmn);
+}
+BasicMoveItemPassive.prototype.checkCondition = function(cond, pkmn, item, foe){
+	// Requires a cooldown to set up and a basic to proc
+	if (cond & Passive.INIT) {
+		item.cooldown = -1; // Set off until a cooldown is used
+	} else if (item.cooldown >= 0 && (cond & Passive.COOLDOWN)) {
+		item.cooldown = 0;
+	} else {
+		return MoveItemPassive.prototype.checkCondition(cond, pkmn,
+								item, foe);
+	}
+	return false;
 }
 
 function BoostedProc() {
@@ -958,6 +1032,11 @@ Item.LIST = {
 			new Stats({spattack: 39}),
 		], [0.03, 0.05, 0.07], new PercentItemPassive("spattack")),
 };
+Item.prototype.calc = function(pkmn) {
+	if (this.passive)
+		return this.passive.calc(pkmn);
+	return 0;
+}
 
 function EmblemColor(stat, r1, b1, r2, b2, r3, b3) {
 	this.stat = stat;
