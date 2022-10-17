@@ -15,6 +15,9 @@ Array.prototype.contains = function(e) {
 }
 
 
+// server constants
+var TICKS_PER_SECOND = 15;
+
 // constants (that don't have a class to be shoved in)
 var HINT_CRIT	= 0x00000001;
 var HINT_SCORE	= 0x00000002;
@@ -220,6 +223,9 @@ BoostedProc.prototype.reset = function(poke) {
 	// This should be a fairly common reset
 	poke.boostedCounter = 0;
 }
+BoostedProc.prototype.basicsPerBoosted = function(poke) {
+	return 0; // dummy value
+}
 
 function UsageBoostedProc(times) {
 	this.times = times;
@@ -237,6 +243,9 @@ UsageBoostedProc.prototype.check = function(poke) {
 	poke.boostedCounter++;
 	return false;
 }
+UsageBoostedProc.prototype.basicsPerBoosted = function(poke) {
+	return this.times;
+}
 
 function TimedBoostedProc(time) {
 	this.time = time;
@@ -244,7 +253,7 @@ function TimedBoostedProc(time) {
 TimedBoostedProc.prototype = new BoostedProc();
 TimedBoostedProc.prototype.constructor = TimedBoostedProc;
 TimedBoostedProc.prototype.set = function(poke) {
-	poke.boostedCounter = this.time;
+	poke.boostedCounter = this.time * TICKS_PER_SECOND;
 }
 TimedBoostedProc.prototype.check = function(poke) {
 	if (poke.boostedCounter >= this.time) {
@@ -255,12 +264,16 @@ TimedBoostedProc.prototype.check = function(poke) {
 	 * every attack, then (this.time/APS) is how long it takes for a
 	 * new boosted attack to be readied.
 	 */
-	poke.boostedCounter+= 1/poke.stats.aps;
+	poke.boostedCounter+= poke.ticksPerBasic();
 	return false;
+}
+TimedBoostedProc.prototype.basicsPerBoosted = function(poke) {
+	return Math.ceil(this.time/poke.ticksPerBasic());
 }
 
 BoostedProc.EVERY_3RD = new UsageBoostedProc(3);
 BoostedProc.EVERY_4TH = new UsageBoostedProc(4);
+BoostedProc.FIVE_SECONDS = new TimedBoostedProc(5);
 
 function Move(name, cd) {
 	if (arguments.length == 0) return;
@@ -306,7 +319,7 @@ ComboMove.prototype.constructor = ComboMove;
 ComboMove.prototype.calc = function(pkmn) {
 	var total = 0;
 	for (var m=0; m<this.moves.length; m++) {
-		total+= this.moves[m].calc(pkmn);
+		total+= pkmn.pokemon.moveset[this.moves[m]].calc(pkmn);
 	}
 	return total;
 }
@@ -1243,4 +1256,14 @@ Champion.prototype.procPassives = function(type, foe) {
 		if (!itm.item) continue;
 		itm.item.passive.proc(type, this, itm, foe);
 	}
+}
+Champion.prototype.basicsPerBoosted = function() {
+	return this.pokemon.boostedProc.basicsPerBoosted(this);
+}
+Champion.prototype.ticksPerBasic = function() {
+	/* Ticks per basic = T/c where T is the period of an attack (in
+ 	 * milliseconds) and c is the constant server tick time (in
+ 	 * milliseconds)
+	 */
+	return Math.ceil(Math.floor(100000/(100+this.stats.aps))/66);
 }

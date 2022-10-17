@@ -91,6 +91,10 @@ Calc.LIST = {
 				champ.pokemon.moveset.Boosted,
 				enemy, p);
 		}),
+	"tpb": new Calc("tpb", [],
+		function(r, champ, enemy, p) {
+			r.tpb = champ.ticksPerBasic();
+		}),
 	"move1": new Calc("move1", [],
 		function(r, champ, enemy, p) {
 			// A Pokemon will always have at least one move.
@@ -122,6 +126,25 @@ Calc.LIST = {
 		// not for comparing the damages of two different movesets.
 		function(r, champ, enemy, p) {
 			r.instant = r.basic+r.boosted+r.move1+r.move2+r.itemdmg;
+		}),
+	"autos": new Calc("autos", ["basic", "boosted", "tpb"],
+		function(r, champ, enemy, p) {
+			var bpb = champ.basicsPerBoosted();
+			var dmg = r.boosted + (bpb-1) * r.basic;
+			var t = (bpb * r.tpb) / TICKS_PER_SECOND;
+			r.autos = dmg / t;
+		}),
+	"basicsdps": new Calc("basicsdps", ["basic", "tpb"],
+		function(r, champ, enemy, p) {
+			var dmg = r.basic;
+			var t = (r.tpb) / TICKS_PER_SECOND;
+			r.basicsdps = dmg / t;
+		}),
+	"boosteddps": new Calc("boosteddps", ["boosted", "tpb"],
+		function(r, champ, enemy, p) {
+			var dmg = r.boosted;
+			var t = (r.tpb) / TICKS_PER_SECOND;
+			r.boosteddps = dmg / t;
 		}),
 };
 
