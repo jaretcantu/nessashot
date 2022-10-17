@@ -29,12 +29,11 @@ Calc.critCalc = function(r, champ, lbl, mv, enemy, param) {
 	var dmg = mv.calc(champ);
 	if (!isDefined(param.crit) || !mv.canCrit()) {
 		r[lbl] = dmg;
-		console.log("No crit: " +mv.canCrit());
 		return;
 	}
 	for (var c=0; c<param.crit.length; c++) {
-		var sfx = param.crit[c];
-		switch (sfx) {
+		var sfx = param.crit.length > 1 ? param.crit[c] : '';
+		switch (param.crit[c]) {
 		case 'nc': // no crit
 			r[lbl + sfx] = dmg;
 			break;
