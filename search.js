@@ -119,6 +119,15 @@ Calc.LIST = {
 			}
 			r.itemdmg = total;
 		}),
+	"itemdps": new Calc("itemdps", [],
+		function(r, champ, enemy, p) {
+			var total = 0;
+			for (var i=0; i<champ.items.length; i++) {
+				var item = champ.items[i].item;
+				total+= item.calc(champ) / item.cooldown(champ);
+			}
+			r.itemdps = total;
+		}),
 	"instant": new Calc("instant", ["basic", "boosted", "move1", "move2",
 					"itemdmg"],
 		// Differs from burst damage in that it is untimed.
@@ -127,12 +136,12 @@ Calc.LIST = {
 		function(r, champ, enemy, p) {
 			r.instant = r.basic+r.boosted+r.move1+r.move2+r.itemdmg;
 		}),
-	"autos": new Calc("autos", ["basic", "boosted", "tpb"],
+	"autos": new Calc("autos", ["basic", "boosted", "tpb", "itemdps"],
 		function(r, champ, enemy, p) {
 			var bpb = champ.basicsPerBoosted();
 			var dmg = r.boosted + (bpb-1) * r.basic;
 			var t = (bpb * r.tpb) / TICKS_PER_SECOND;
-			r.autos = dmg / t;
+			r.autos = dmg / t + r.itemdps;
 		}),
 	"basicsdps": new Calc("basicsdps", ["basic", "tpb"],
 		function(r, champ, enemy, p) {
