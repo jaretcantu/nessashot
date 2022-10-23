@@ -116,6 +116,9 @@ Passive.prototype.proc = function(type, poke, item, foe) {
 Passive.prototype.calc = function(pkmn) {
 	return 0;
 }
+Passive.prototype.cooldown = function(pkmn) {
+	return 1; // prevent divide-by-zero error for DPS calculation
+}
 
 function StatPassive(proc, statf) {
 	if (arguments.length == 0) return;
@@ -168,6 +171,7 @@ TimedItemPassive.prototype.checkCondition = function(cond, pkmn, item, foe) {
 	// XXX TODO Reset timer here
 	return true;
 }
+TimedItemPassive.prototype.cooldown = function(pkmn) { return this.time; }
 
 function MoveItemPassive(cond) {
 	TimedItemPassive.call(this, cond, MoveItemPassive.useMove, 0);
@@ -192,6 +196,9 @@ MoveItemPassive.prototype.getMove = function(pkmn) {
 }
 MoveItemPassive.prototype.calc = function(pkmn) {
 	return this.getMove(pkmn).calc(pkmn);
+}
+MoveItemPassive.prototype.cooldown = function(pkmn) {
+	return this.getMove(pkmn).cooldown;
 }
 
 function BasicMoveItemPassive() {
@@ -1060,6 +1067,11 @@ Item.prototype.calc = function(pkmn) {
 	if (this.passive)
 		return this.passive.calc(pkmn);
 	return 0;
+}
+Item.prototype.cooldown = function(pkmn) {
+	if (this.passive)
+		return this.passive.cooldown(pkmn);
+	return 1; // prevent DPS calculations from having divide-by-zero error
 }
 
 function EmblemColor(stat, r1, b1, r2, b2, r3, b3) {
