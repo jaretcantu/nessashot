@@ -803,7 +803,10 @@ Item.LIST = {
 			new Stats({attack: 14, aps: 7.0}),
 			new Stats({attack: 15, aps: 7.0}),
 			new Stats({attack: 15, aps: 7.5}),
-		], [0.01, 0.02, 0.03], Passive.DUMMY/*bonus basic attack dmg*/),
+		], [new DamagingMove("MuscleBand", 0,0,0,0,1).setPerc(0.01,0),
+		    new DamagingMove("MuscleBand", 0,0,0,0,1).setPerc(0.02,0),
+		    new DamagingMove("MuscleBand", 0,0,0,0,1).setPerc(0.03,0),
+		], new BasicMoveItemPassive()),
 	RazorClaw: new Item("RazorClaw", [
 			new Stats({attack: 1, critrate: 0.006}),
 			new Stats({attack: 1, critrate: 0.007}),
