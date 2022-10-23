@@ -354,9 +354,16 @@ function HealthModMove(name, pmux, smux, lev, flat, cd) {
 	this.specMultiplier = smux;
 	this.levelScaling = lev;
 	this.baseDamage = flat;
+	this.maxHealth = 0;
+	this.remHealth = 0;
 }
 HealthModMove.prototype = new Move();
 HealthModMove.prototype.constructor = HealthModMove;
+HealthModMove.prototype.setPerc = function(rh, mh) {
+	this.remHealth = rh;
+	this.maxHealth = mh;
+	return this;
+}
 HealthModMove.prototype.calc = function(pkmn) {
 	return	this.physMultiplier * pkmn.stats.attack +
 		this.specMultiplier * pkmn.stats.spattack +
