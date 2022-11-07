@@ -168,7 +168,8 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 		// Remove most non-alphanumeric chars from label;
 		// Keep parenths as they are often informative
 		lbl = lbl.replaceAll(/[- ]/g, '');
-		var rt = $(m,pfx+'ratio') / 100;
+		var rt = $(m,pfx+'ratio');
+		if (!PREPROC_TARGET) rt/= 100;
 		var q = (lbl.match(/\W/) ? '"' : '');
 		var cd = 0;
 		if (pr == 0) {
@@ -190,7 +191,7 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 		// Just assume everything is damaging; it can be changed later.
 		print(pad + q + lbl + q + ": new DamagingMove(\"" + lbl +
 			"\", " +
-		      (p.damage_type == 'Physical' ?  rt + ",0" : "0," + rt) +
+		      (p.damage_type == 'Physical' ? rt + ",0" : "0," + rt) +
 		      ", " + $(m,pfx+'slider') + ", " + $(m,pfx+'base') +
 		      ", " + cd + "),");
 		hpComp.push(lbl);
