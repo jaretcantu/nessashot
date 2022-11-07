@@ -250,6 +250,8 @@ function run(args) {
 		case '-h': case '--help':
 			print("./genpoke [args?] [stats.json [pokemon.json " +
 				"[preproc.ini]]]");
+			print(" -h/--help: Print this message");
+			print(" -p/--preproc [pokemon]: Get preprocessor");
 			quit(0);
 		default:
 			throw("Unknown argument: " + arg);
