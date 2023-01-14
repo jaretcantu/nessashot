@@ -74,6 +74,8 @@ Stats.LIST = ["health", "attack", "defense", "spattack", "spdefense",
 		"charge", "movement",
 		// Stats that are probably outside of progression and item only
 		"critdamage", "recovery"];
+Stats.BASIC_STATS = ["health", "attack", "defense", "spattack", "spdefense",
+			"movement"];
 Stats.prototype.toString = function() {
 	var str = "Stats(";
 	var something = false;
@@ -1155,8 +1157,12 @@ EmblemPage.prototype.addStats = function(poke) {
 	var baseStats = poke.pokemon.progression[poke.level-1];
 	for (var c in this.colors) {
 		var col = Emblem.COLORS[c];
-		poke.stats[col.stat]+= baseStats[col.stat] *
-				      col.getBonus(this.colors[c]);
+		var bns = col.getBonus(this.colors[c]);
+		if (Stats.BASIC_STATS.contains(col.stat))
+			poke.stats[col.stat]+= baseStats[col.stat] * bns;
+		else
+			poke.stats[col.stat]+= bns;
+				      ;
 	}
 	poke.stats.add(this.stats);
 }
