@@ -1282,7 +1282,7 @@ function EmblemPage(args) {
 				if (a.penalty)
 					this.stats[a.penalty]-=
 						Emblem.STATS[a.rank][a.penalty];
-			} else {
+			} else if (a.indexOf('=') >= 0) {
 				// For text input
 				var pair = a.split('=');
 				var col = pair[0].charAt(0).toUpperCase() +
@@ -1291,6 +1291,15 @@ function EmblemPage(args) {
 					if (!isDefined(this.colors[col]))
 						this.colors[col] = 0;
 					this.colors[col]+= Number(pair[1]);
+				} else if (pair[1].endsWith('%')) {
+					if (!isDefined(this.stats.percs))
+						this.stats.percs = [];
+					var p0 = pair[0];
+					if (!isDefined(this.stats.percs[p0]))
+						this.stats.percs[p0] = 0;
+					var p = Number(pair[1].substring(0,
+							pair[1].length-1))/100;
+					this.stats.percs[p0]+= p;
 				} else {
 					this.stats[pair[0]]+= Number(pair[1]);
 				}
@@ -1312,7 +1321,12 @@ EmblemPage.prototype.addStats = function(poke) {
 			poke.stats[col.stat]+= baseStats[col.stat] * bns;
 		else
 			poke.stats[col.stat]+= bns;
-				      ;
+	}
+	if (this.stats.percs) {
+		for (c in this.stats.percs) {
+			var bns = this.stats.percs[c];
+			poke.stats[c]+= baseStats[c] * bns;
+		}
 	}
 	poke.stats.add(this.stats);
 }
