@@ -1226,7 +1226,8 @@ EmblemColor.prototype.getBonus = function(count) {
 	return 0;
 }
 
-function Emblem(color, rank, bonus, penalty) {
+function Emblem(family, color, rank, bonus, penalty) {
+	this.family = family;
 	this.color = color;
 	this.rank = Emblem.RANKS[rank];
 	this.bonus = bonus;
@@ -1252,10 +1253,22 @@ function EmblemPage(args) {
 	if (isDefined(args.length)) { // is array (or arguments)
 		this.colors = {};
 		this.stats = new Stats();
+		var dupes = [];
 		for (var i=0; i<args.length; i++) {
 			var a = args[i];
+			// Check if the name of an emblem was provided
+			if (isDefined(Emblem.LIST[a]))
+				a = Emblem.LIST[a];
 			if (a instanceof Emblem) {
-				this.colors[a.color]++;
+				if (!dupes.contains(a.family)) {
+					dupes.push(a.family);
+					for (var c=0; c<a.color.length; c++) {
+						var cl = a.color[c];
+						if (!isDefined(this.colors[cl]))
+							this.colors[cl] = 0;
+						this.colors[cl]++;
+					}
+				}
 				if (a.bonus)
 					this.stats[a.bonus]+=
 						Emblem.STATS[a.rank][a.bonus];
