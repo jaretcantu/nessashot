@@ -1,0 +1,94 @@
+#!/usr/bin/js
+/* genemb
+ * Generate the emblems.js include from unite-db.com json
+ * Copyright (C) 2023 Jaret Jay Cantu
+ * Licensed under the AGPL
+ */
+
+// file utility functions
+function readJson(f) {
+	// read file
+	var content = read(f);
+	if (content == '')
+		throw("Could not read file: " + f);
+	var parsed = JSON.parse(content);
+	if (!parsed || parsed.length == 0)
+		throw("Could not parse file: " + f);
+	return parsed;
+}
+
+// Convenience mapping so that changes to the JSON don't invalidate this script
+var GRADE_MAP = {
+		A: 'Gold',
+		B: 'Silver',
+		C: 'Bronze',
+	};
+
+var STAT_MAP = {
+		crit: 'critrate',
+		hp: 'health',
+		sp_attack: 'spattack',
+		sp_defense: 'spdefense',
+		speed: 'movement',
+	};
+
+// main function
+function run(args) {
+	// check args
+	while (args.length && args[0].charAt(0) == '-') {
+		var arg = args.shift();
+		switch (arg) {
+		case '-h': case '--help':
+			print("./genemb [args?] [emblems.json]");
+			print(" -h/--help: Print this message");
+			quit(0);
+		default:
+			throw("Unknown argument: " + arg);
+		}
+	}
+
+	// get info
+	var emblems = readJson(scriptArgs && scriptArgs.length > 0
+				? scriptArgs[0] : "emblems.json");
+
+
+	// print header
+	print("// nessashot emblem listing -- Generated file");
+	print("// " + (new Date()));
+	print("Emblem.LIST = {");
+
+	for (var i=0; i<emblems.length; i++) {
+		var e = emblems[i];
+		var grade = GRADE_MAP[e.grade];
+		var family = e.display_name.replace(
+			// Account for Nidoran using emoji in its name
+			/♀/, 'F').replace(/♂/, 'M'
+			// Remove all non-word characters for ease in typing
+			).replaceAll(/\W/g, '');
+		var name = grade + family;
+		var color1 = e.color1;
+		var color2 = (e.color2 ? e.color2 : null);
+		var stats = e.stats[0];
+		var bonus, penalty;
+		for (var s in stats) {
+			var ss = STAT_MAP[s] ? STAT_MAP[s] : s;
+			if (stats[s] > 0) {
+				bonus = ss;
+			} else if (stats[s] < 0) {
+				penalty = ss;
+			} else {
+				bonus = ss;
+				penalty = ss;
+			}
+		}
+		print("\t" + name + ': new Emblem("' + family +
+			'", ["' + color1 + (color2 ? '", "' + color2 : '') +
+			'"], "' + grade + '", "' + bonus +
+			'", "' + penalty + '"),');
+	}
+
+	// print footer
+	print("};");
+};
+
+run(scriptArgs);

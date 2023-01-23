@@ -6,6 +6,7 @@
  */
 load("nessashot.js");
 load("pokemon.js");
+load("emblems.js");
 load("search.js");
 
 function showHelp() {
