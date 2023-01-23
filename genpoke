@@ -52,7 +52,7 @@ function readAndHashIni(f) {
 		} else if (poke == '') {
 			throw("No Pokemon declared for code: " + l);
 		} else if (l.match(/^\s*\w+\s*=/) && seq <= 0) {
-			var p = l.match(/^\s*(\w+)\s*=\s*([^\s]+)\s*$/);
+			var p = l.match(/^\s*(\w+)\s*=\s*(\S.*)\s*$/);
 			// Special value lines
 			rehashed[poke][p[1]] = p[2];
 			if (seq == 0) seq = -1;
