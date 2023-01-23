@@ -421,7 +421,7 @@ function removeCommonLabels(label0, common) {
 }
 
 function calcTable(poke, levels, items, parsed, score, emblems, moves) {
-	var label = [poke.name, items.join("/"), 'Score='+score];
+	var label = [poke.name, items.join("/"), emblems, 'Score='+score];
 	var result = [label];
 
 	// TODO Determine show actions

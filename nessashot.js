@@ -1234,6 +1234,7 @@ function Emblem(family, color, rank, bonus, penalty) {
 	this.penalty = penalty;
 }
 Emblem.RANKS = {Bronze:0, Silver:1, Gold:2};
+Emblem.RRANKS = ["Bronze", "Silver", "Gold"];
 Emblem.STATS = [ new Stats(30, 1.2, 3, 1.8, 3, 0.3, 0,0,0,0,0,0, 21),
 		 new Stats(40, 1.6, 4, 2.4, 4, 0.5, 0,0,0,0,0,0, 28),
 		 new Stats(50, 2,   5, 3,   5, 0.6, 0,0,0,0,0,0, 35) ];
@@ -1248,9 +1249,13 @@ Emblem.COLORS = {
 		White: new EmblemColor('health', 2, 0.01, 4, 0.02, 6, 0.04),
 		Yellow: new EmblemColor('movement', 3, 0.04, 5, 0.06, 7, 0.12),
 	};
+Emblem.prototype.toString = function() {
+	return Emblem.RRANKS[this.rank] + this.family;
+}
 
 function EmblemPage(args) {
 	if (isDefined(args.length)) { // is array (or arguments)
+		this.name = '';
 		this.colors = {};
 		this.stats = new Stats();
 		var dupes = [];
@@ -1260,6 +1265,8 @@ function EmblemPage(args) {
 			if (isDefined(Emblem.LIST[a]))
 				a = Emblem.LIST[a];
 			if (a instanceof Emblem) {
+				if (this.name != '') this.name+= '/';
+				this.name+= a;
 				if (!dupes.contains(a.family)) {
 					dupes.push(a.family);
 					for (var c=0; c<a.color.length; c++) {
@@ -1292,6 +1299,9 @@ function EmblemPage(args) {
 	} else {
 		EmblemPage.call(this, arguments); // treat arg list as array
 	}
+}
+EmblemPage.prototype.toString = function() {
+	return this.name;
 }
 EmblemPage.prototype.addStats = function(poke) {
 	var baseStats = poke.pokemon.progression[poke.level-1];
