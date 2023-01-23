@@ -378,21 +378,33 @@ ComboMove.prototype.constructor = ComboMove;
 ComboMove.prototype.calc = function(pkmn) {
 	var total = 0;
 	for (var m=0; m<this.moves.length; m++) {
+		try {
 		total+= pkmn.pokemon.moveset[this.moves[m]].calc(pkmn);
+		} catch(e) { throw(this + ".calc() failed on " +
+					this.moves[m] + ": " + e);
+		}
 	}
 	return total;
 }
 
-function StatusMove(name, dur, stats, cd) {
+function StatusMove(name, dur, flatStats, lvlStats, cd) {
 	if (arguments.length == 0) return;
 	Move.call(this, name, cd);
 	this.duration = dur;
-	this.stats = stats;
+	this.flatStats = flatStats;
+	this.lvlStats = lvlStats;
 }
 StatusMove.prototype = new Move();
 StatusMove.prototype.constructor = StatusMove;
 
-function DebuffMove(name, dur, stats, cd) {
+function BuffMove(name, dur, flatStats, lvlStats, cd) {
+	if (arguments.length == 0) return;
+	StatusMove.apply(this, arguments);
+}
+BuffMove.prototype = new StatusMove();
+BuffMove.prototype.constructor = BuffMove;
+
+function DebuffMove(name, dur, flatStats, lvlStats, cd) {
 	if (arguments.length == 0) return;
 	StatusMove.apply(this, arguments);
 }
