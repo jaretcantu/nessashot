@@ -456,6 +456,7 @@ HealingMove.prototype = new HealthModMove();
 HealingMove.prototype.constructor = HealingMove;
 
 Move.BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0).setCrit();
+Move.CRITLESS_BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0);
 
 function Item(name, prog, unlocks, passive) {
 	if (arguments.length == 0) return;
