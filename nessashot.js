@@ -235,6 +235,7 @@ BoostedProc.prototype.reset = function(poke) {
 BoostedProc.prototype.basicsPerBoosted = function(poke) {
 	return 0; // dummy value
 }
+BoostedProc.prototype.getASBonus = function(poke) { return 0; }
 
 function UsageBoostedProc(times) {
 	this.times = times;
@@ -278,6 +279,41 @@ TimedBoostedProc.prototype.check = function(poke) {
 }
 TimedBoostedProc.prototype.basicsPerBoosted = function(poke) {
 	return Math.ceil(this.time/poke.ticksPerBasic());
+}
+
+function RampBoostedProc(times, asBonus, maxFlat, maxLev) {
+	UsageBoostedProc.call(this, times);
+	this.attackSpeedBonus = asBonus;
+	this.maxAttackSpeedBonusFlat = maxFlat;
+	this.maxAttackSpeedBonusLvl = maxLev;
+}
+RampBoostedProc.prototype = new UsageBoostedProc();
+RampBoostedProc.prototype.constructor = RampBoostedProc;
+RampBoostedProc.prototype.reset = function(poke) {
+	/* No-op; reset will only happen when the attacks are dropped, which
+	 * we will assume will never happen.
+	 */
+}
+RampBoostedProc.prototype.check = function(poke) {
+	// Don't ramp the boosted counter past the max times
+	if (poke.boostedCounter == this.times)
+		return true;
+	if (++poke.boostedCounter == this.times)
+		return true;
+	return false;
+}
+RampBoostedProc.prototype.basicsPerBoosted = function(poke) {
+	return this.times;
+}
+RampBoostedProc.prototype.getASBonus = function(poke) {
+	// If we are at max times, return the max (for non-gradual increases)
+	var max = this.maxAttackSpeedBonusFlat +
+		  this.maxAttackSpeedBonusLvl * (poke.level-1);
+	if (poke.boostedCounter == this.times)
+		return max;
+	// Calculate per-hit
+	var bonus = poke.boostedCounter * this.attackSpeedBonus;
+	return bonus < max ? bonus : max;
 }
 
 BoostedProc.EVERY_3RD = new UsageBoostedProc(3);
@@ -1288,10 +1324,17 @@ Champion.prototype.procPassives = function(type, foe) {
 Champion.prototype.basicsPerBoosted = function() {
 	return this.pokemon.boostedProc.basicsPerBoosted(this);
 }
-Champion.prototype.ticksPerBasic = function() {
-	/* Ticks per basic = T/c where T is the period of an attack (in
+Champion.ticksPerAttackSpeed = function(aps) {
+	/* Ticks per attack = T/c where T is the period of an attack (in
  	 * milliseconds) and c is the constant server tick time (in
  	 * milliseconds)
 	 */
-	return Math.ceil(Math.floor(100000/(100+this.stats.aps))/66);
+	return Math.ceil(Math.floor(100000/(100+aps))/66);
+}
+Champion.prototype.ticksPerBasic = function() {
+	return Champion.ticksPerAttackSpeed(this.stats.aps);
+}
+Champion.prototype.ticksPerBoosted = function() {
+	return Champion.ticksPerAttackSpeed(this.stats.aps +
+		this.pokemon.boostedProc.getASBonus(this));
 }

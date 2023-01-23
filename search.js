@@ -95,6 +95,11 @@ Calc.LIST = {
 		function(r, champ, enemy, p) {
 			r.tpb = champ.ticksPerBasic();
 		}),
+	"tpboosted": new Calc("tpboosted", [],
+		function(r, champ, enemy, p) {
+			champ.pokemon.boostedProc.set(champ);
+			r.tpboosted = champ.ticksPerBoosted();
+		}),
 	"move1": new Calc("move1", [],
 		function(r, champ, enemy, p) {
 			// A Pokemon will always have at least one move.
@@ -149,10 +154,10 @@ Calc.LIST = {
 			var t = (r.tpb) / TICKS_PER_SECOND;
 			r.basicsdps = dmg / t;
 		}),
-	"boosteddps": new Calc("boosteddps", ["boosted", "tpb"],
+	"boosteddps": new Calc("boosteddps", ["boosted", "tpboosted"],
 		function(r, champ, enemy, p) {
 			var dmg = r.boosted;
-			var t = (r.tpb) / TICKS_PER_SECOND;
+			var t = (r.tpboosted) / TICKS_PER_SECOND;
 			r.boosteddps = dmg / t;
 		}),
 };
