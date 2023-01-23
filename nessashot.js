@@ -200,7 +200,7 @@ MoveItemPassive.prototype.calc = function(pkmn) {
 	return this.getMove(pkmn).calc(pkmn);
 }
 MoveItemPassive.prototype.cooldown = function(pkmn) {
-	return this.getMove(pkmn).cooldown;
+	return this.getMove(pkmn).getCoolDown(pkmn);
 }
 
 function BasicMoveItemPassive() {
@@ -327,12 +327,26 @@ function Move(name, cd) {
 	// Values not common enough to justify an argument
 	this.storedUses = 1;
 	this.resetsBoosted = false;
+	this.lockout = 0;
+	this.cdx = 0;
 }
 Move.prototype.toString = function() {
 	return "Move(" + this.name + ")";
 }
+Move.prototype.getCoolDown = function(pkmn) {
+	var cdr = 1.0 - pkmn.stats.cdr;
+	return this.cooldown*cdr + this.cdx;
+}
 Move.prototype.setStore = function(u) {
 	this.storedUses = u;
+	return this;
+}
+Move.prototype.setLockOut = function(lo) {
+	this.lockout = lo;
+	return this;
+}
+Move.prototype.setCoolDownEx = function(cdx) {
+	this.cdx = cdx;
 	return this;
 }
 Move.prototype.setBoost = function() {
