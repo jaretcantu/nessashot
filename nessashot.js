@@ -1234,9 +1234,9 @@ function Emblem(family, color, rank, bonus, penalty) {
 	this.penalty = penalty;
 }
 Emblem.RANKS = {Bronze:0, Silver:1, Gold:2};
-Emblem.STATS = [ new Stats(30, 1,   3, 1.5, 3, 0.6, 0,0,0,0,0,0, 21),
-		 new Stats(40, 1.5, 4, 2.5, 4, 0.8, 0,0,0,0,0,0, 28),
-		 new Stats(50, 2,   5, 3,   5, 1,   0,0,0,0,0,0, 35) ];
+Emblem.STATS = [ new Stats(30, 1.2, 3, 1.8, 3, 0.3, 0,0,0,0,0,0, 21),
+		 new Stats(40, 1.6, 4, 2.4, 4, 0.5, 0,0,0,0,0,0, 28),
+		 new Stats(50, 2,   5, 3,   5, 0.6, 0,0,0,0,0,0, 35) ];
 Emblem.COLORS = {
 		Black: new EmblemColor('cdr', 3, 0.02, 5, 0.04, 7, 0.06),
 		Blue: new EmblemColor('defense', 2, 0.02, 4, 0.04, 6, 0.08),
@@ -1244,7 +1244,7 @@ Emblem.COLORS = {
 		Green: new EmblemColor('spattack', 2, 0.01, 4, 0.02, 6, 0.04),
 		Pink: new EmblemColor('tenacity', 3, 0.04, 5, 0.08, 7, 0.16),
 		Purple: new EmblemColor('spdefense', 2, 0.02, 4, 0.04, 6, 0.08),
-		Red: new EmblemColor('aps', 3, 0.02, 5, 0.04, 7, 0.08),
+		Red: new EmblemColor('aps', 3, 2, 5, 4, 7, 8),
 		White: new EmblemColor('health', 2, 0.01, 4, 0.02, 6, 0.04),
 		Yellow: new EmblemColor('movement', 3, 0.04, 5, 0.06, 7, 0.12),
 	};
