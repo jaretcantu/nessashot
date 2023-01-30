@@ -1243,6 +1243,7 @@ Emblem.COLORS = {
 		Blue: new EmblemColor('defense', 2, 0.02, 4, 0.04, 6, 0.08),
 		Brown: new EmblemColor('attack', 2, 0.01, 4, 0.02, 6, 0.04),
 		Green: new EmblemColor('spattack', 2, 0.01, 4, 0.02, 6, 0.04),
+		Navy: new EmblemColor('charge', 3, 0.01, 5, 0.02, 7, 0.04),
 		Pink: new EmblemColor('tenacity', 3, 0.04, 5, 0.08, 7, 0.16),
 		Purple: new EmblemColor('spdefense', 2, 0.02, 4, 0.04, 6, 0.08),
 		Red: new EmblemColor('aps', 3, 2, 5, 4, 7, 8),
