@@ -1415,10 +1415,11 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
 	} else {
 		for (var m=0; m<2; m++) {
 			var ls = this.pokemon.learnset[m];
+			var moveMod = (m==0 ? move1 : move2) * 2;
 			if (this.level >= ls.upgrade)
-				this.moves.push(ls.moves[2]);
+				this.moves.push(ls.moves[2+moveMod]);
 			else if (this.level >= ls.level)
-				this.moves.push(ls.moves[1]);
+				this.moves.push(ls.moves[1+moveMod]);
 			else
 				this.moves.push(ls.moves[0]);
 		}
