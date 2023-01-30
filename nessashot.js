@@ -1235,11 +1235,11 @@ function Emblem(family, color, rank, bonus, penalty) {
 }
 Emblem.RANKS = {Bronze:0, Silver:1, Gold:2};
 Emblem.RRANKS = ["Bronze", "Silver", "Gold"];
-Emblem.STATS = [ new Stats(30, 1.2, 3, 1.8, 3, 0.3, 0,0,0,0,0,0, 21),
-		 new Stats(40, 1.6, 4, 2.4, 4, 0.5, 0,0,0,0,0,0, 28),
-		 new Stats(50, 2,   5, 3,   5, 0.6, 0,0,0,0,0,0, 35) ];
+Emblem.STATS = [ new Stats(30, 1.2, 3, 1.8, 3, 0.003, 0,0,0,0,0,0, 21),
+		 new Stats(40, 1.6, 4, 2.4, 4, 0.005, 0,0,0,0,0,0, 28),
+		 new Stats(50, 2,   5, 3,   5, 0.006, 0,0,0,0,0,0, 35) ];
 Emblem.COLORS = {
-		Black: new EmblemColor('cdr', 3, 0.02, 5, 0.04, 7, 0.06),
+		Black: new EmblemColor('cdr', 3, 0.01, 5, 0.02, 7, 0.04),
 		Blue: new EmblemColor('defense', 2, 0.02, 4, 0.04, 6, 0.08),
 		Brown: new EmblemColor('attack', 2, 0.01, 4, 0.02, 6, 0.04),
 		Green: new EmblemColor('spattack', 2, 0.01, 4, 0.02, 6, 0.04),
