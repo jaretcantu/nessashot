@@ -193,7 +193,7 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 			"\", " +
 		      (p.damage_type == 'Physical' ? rt + ",0" : "0," + rt) +
 		      ", " + $(m,pfx+'slider') + ", " + $(m,pfx+'base') +
-		      ", " + cd + "),");
+		      ", " + cd + ")" + (lbl == 'Boosted'?'.setCrit()':'') +",");
 		hpComp.push(lbl);
 	}
 
