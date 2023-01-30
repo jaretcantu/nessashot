@@ -11,17 +11,17 @@ load("search.js");
 
 function showHelp() {
 	print("nessashot {-h|--help}                     - Show this message");
-	print("nessashot [-s|--show stats,dps,tankiness]  \\");
-	print("          [-l|--levels {#,#...|#-#}]       \\");
-	print("          [-m|--move 1|2|Name]             \\");
-	print("          [-e|--emblem {color=#|stat=#}]   \\");
-	print("          [-i|--item Name(=Level)]         \\");
-	print("          [--itemlevel Name=Level]         \\");
-	print("          [--itemdefault Level]            \\");
-	print("          [--specperc %%]                  \\");
-	print("          [-c|--crit (min|avg|max)]        \\");
-	print("          [-o|--optimize items|itemlevels] \\");
-	print("          [-O|--sort show]                 \\");
+	print("nessashot [-s|--show stats,dps,tankiness]          \\");
+	print("          [-l|--levels {#,#...|#-#}]               \\");
+	print("          [-m|--move 1|2|Name]                     \\");
+	print("          [-e|--emblem {color=#|stat=#}]           \\");
+	print("          [-i|--item Name(=Level)]                 \\");
+	print("          [--itemlevel Name=Level]                 \\");
+	print("          [--itemdefault Level]                    \\");
+	print("          [--specperc %%]                          \\");
+	print("          [-c|--crit (min|avg|max)]                \\");
+	print("          [-o|--optimize items|itemlevels|emblems] \\");
+	print("          [-O|--sort show]                         \\");
 	print("          [-S|--score min,max|score]       \\");
 	print("          Pokemon                         - Show Pokemon chart");
 }
@@ -104,7 +104,15 @@ if (scriptArgs.length == 0) {
 			var str = removeCommonLabels(tbl[0], common).join(' ') +
 				  "@" + e + ": ";
 			for (var l=1; l<tbl.length; l++) {
-				if (l>1) str+= ',';
+				if (l>1) {
+					str+= ',';
+					// The last entry may be numeric fitness
+					if (l == tbl.length-1 &&
+					    !(tbl[l] instanceof Object)) {
+						str+= tbl[l];
+						break;
+					}
+				}
 				str+= tbl[l][e];
 			}
 			print(str);

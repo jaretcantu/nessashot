@@ -315,10 +315,11 @@ function parseOption(parsed, arg, args, a) {
 		}
 		parsed.crit = arg;
 		break;
-	case 'emblem':
-		arg = args[++a];
-		parsed.emblems.push(arg);
-		break;
+	case 'emblem': {
+		var emblems = args[++a].split(',');
+		for (var e=0; e<emblems.length; e++)
+			parsed.emblems.push(emblems[e]);
+		break; }
 	case 'optimize':
 		if (isDefined(parsed.search)) {
 			throw("Already optimizing " + parsed.search +
@@ -339,6 +340,7 @@ function parseOption(parsed, arg, args, a) {
 		case "items":
 			needsArray = false;
 			break;
+		case "emblems":
 		case "itemlevels":
 			needsArray = true;
 			break;
@@ -418,6 +420,132 @@ function removeCommonLabels(label0, common) {
 		}
 	}
 	return label;
+}
+
+function calcSortFitness(entry, base, levels, parsed) {
+	var fitness = 0;
+	for (var i=0; i<parsed.sort.length; i++) {
+		var s = parsed.sort[i];
+		fitness*= 4; // early entires are more important than later ones
+		// Calculate a percentage difference
+		var newfit = 0;
+		for (var l=0; l<levels.length; l++) {
+			var lev = levels[l];
+			var bs = base[lev][s];
+			newfit+= ((entry[lev][s] - bs) / bs);
+		}
+		fitness+= newfit;
+	}
+	return fitness;
+}
+
+function emblemExpand(tuples, list, colCon, statCon, pos,
+		      tables, base, poke, levelList, items, moves, parsed) {
+	var t = tuples[pos];
+	for (var amt=0; amt<=t[1]; amt++) {
+		if (amt) {
+			list.push(t[0]);
+			// Check for end on each addition
+			if (list.length == 10) {
+				var page = new EmblemPage(list);
+				// check effects against required constraints
+				for (var c in colCon)
+					if (!isDefined(page.colors[c]) ||
+					    page.colors[c] < colCon[c])
+						return;
+				for (c in statCon)
+					if (page.stats[c] < statCon[c])
+						return;
+				// if everything passed, run the page
+				iterateEmblem(tables, base, poke, levelList,
+					      items, page, moves, parsed);
+				// terminate this branch; nothing more to add
+				// here or any higher position
+				return;
+			}
+		}
+		if (pos < tuples.length-1) {
+			emblemExpand(tuples, list.slice(), // copy
+				     colCon, statCon, pos+1,
+				     tables, base, poke, levelList, items,
+				     moves, parsed);
+		}
+	}
+}
+
+function iterateEmblem(tables, base, poke, levelList, items, emblems,
+		       moves, parsed) {
+	var tbl = calcTables(poke, levelList, items, emblems,
+			     moves, parsed);
+	for (t=0; t<tbl.length; t++) {
+		var tt = tbl[t];
+		if (parsed.sort.length > 0) {
+			var fitness = calcSortFitness(tt, base, levelList,
+							parsed);
+			var append = true;
+			tt.push(fitness);
+			for (var s=0; s<tables.length; s++) {
+				var ss = tables[s];
+				if (fitness < ss[ss.length-1]) {
+					tables.splice(s, 0, tt);
+					append = false;
+					break;
+				}
+			}
+			/* Most entries should have a low fitness, so
+			 * keep the list sorted from lowest to highest
+			 * for speed.
+			 * The cost of shifting and dropping entries at
+			 * zero is probably more time efficient than
+			 * reverse-sorting it.
+			 */
+			if (append)
+				tables.push(tt);
+			// TODO Make customizable table length
+			if (tables.length > 100)
+				tables.shift();
+		} else {
+			// XXX This will cause OoM errors; use sort to
+			//     limit the size of the list.
+			tables.push(tt);
+		}
+	}
+}
+
+function iterateEmblems(tables, base, poke, levelList, items, moves, parsed) {
+	if (parsed.search == 'emblems') {
+		// Create a simpler constraints list
+		var colCon = {};
+		var statCon = {};
+		for (var e=0; e<parsed.searchargs.length; e++) {
+			var pair = parsed.searchargs[e].split('=');
+			var colCheck = pair[0].charAt(0).toUpperCase() +
+                                          pair[0].substring(1).toLowerCase();
+			if (isDefined(Emblem.COLORS[colCheck]))
+				colCon[colCheck] = pair[1];
+			else
+				statCon[pair[0]] = pair[1];
+		}
+		// Put emblem list into searchable object
+		var eTuples = [];
+		for (e=0; e<parsed.emblems.length; e++) {
+			var pair = parsed.emblems[e].split('=');
+			// If the pair was a simple emblem, set count to 1
+			if (pair.length == 1) pair[1] = 1;
+			if (!isDefined(Emblem.LIST[pair[0]]))
+				throw("No such emblem: " + pair[0]);
+			pair[0] = Emblem.LIST[pair[0]];
+			eTuples.push(pair);
+		}
+		emblemExpand(eTuples, [], colCon, statCon, 0,
+			     tables, base, poke, levelList, items,
+			     moves, parsed);
+	} else { // no emblem search
+		iterateEmblem(tables, base, poke, levelList, items,
+			      (isDefined(parsed.emblems) ?
+				new EmblemPage(parsed.emblems) : null),
+			      moves, parsed);
+	}
 }
 
 function calcTable(poke, levels, items, parsed, score, emblems, moves) {
@@ -526,6 +654,7 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 
 	// fill out specified items
 	var iterItems = []; // array of triples of pairs
+	var noItem = ['',0];
 
 	if (parsed.search == 'itemlevels') {
 		// Determine which/how many item levels will be searched
@@ -626,7 +755,6 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 					break INNER;
 				}
 			}
-
 		}
 		
 		/* Permutate every possible item combination; can do so easily
@@ -655,55 +783,49 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 		}
 		// Flesh out unspecified items
 		while (specItems.length < 3)
-			specItems.push(['', 0]);
+			specItems.push(noItem);
 		iterItems.push(specItems);
 	}
 
-	/* TODO Add emblem multiplex search, which will be enormous.
-	 *	To save time, instead of the item combination search, use a
-	 *	Emblem/Amount search. This prevents one type of emblem from
-	 *	being used in small amounts a number of times (so for four of
-	 *	the same emblem: XOOO, OXOO, etc).
-	 *	The search would iterate each unique emblem the same as the
-	 *	item search (expanding from an array index), but it would also
-	 *	iterate each possible count of the unique emblem -- up to ten --
-	 *	to prevent duplicate amounts from being searched in the future.
-	 */
-	var iterEmblems = [];
-	if (parsed.search == 'emblems') {
-		throw("Emblem search is not yet implemented");
-	} else { // no emblem search
-		iterEmblems.push(isDefined(parsed.emblems)
-			? new EmblemPage(parsed.emblems) : null);
+	var levelWeight;
+	if (parsed.search) {
+		if (!parsed.levelweight) {
+			switch (poke.role) {
+			case Pokemon.ALLROUNDER:
+			case Pokemon.ATTACKER:
+			case Pokemon.SPEEDSTER:
+				levelWeight = LEVEL_WEIGHT.high.slice();
+				break;
+			case Pokemon.DEFENDER:
+			case Pokemon.SUPPORTER:
+				levelWeight = LEVEL_WEIGHT.low.slice();
+				break;
+			}
+		} else {
+			// either parse a CSV or look-up its word name
+			levelWeight = LEVEL_WEIGHT[parsed.levelweight].slice();
+		}
+		// since the level index starts at 1, store sum at 0 for convennc
+		var sum = 0;
+		for (i=0; i<levelList.length; i++)
+			sum+= levelWeight[levelList[i]-1];
+		levelWeight.unshift(sum);
 	}
 
 	// Multiplex search parameters (NB: More multiplexing based on hints)
 	var t, tables = [];
-	for (var e=0; e<iterEmblems.length; e++) {
 	for (var m1=0; m1<iterMoves[0].length; m1++) {
 	for (var m2=0; m2<iterMoves[1].length; m2++) {
+	var base = (parsed.sort.length == 0 ? null :
+			calcTables(poke, levelList, [noItem,noItem,noItem],null,
+				   [iterMoves[0][m1]-1,iterMoves[1][m2]-1],
+				   levelWeight, parsed)[0]);
 	for (i=0; i<iterItems.length; i++) {
-		var tbl = calcTables(poke, levelList,
-					iterItems[i],
-					iterEmblems[e],
-					[iterMoves[0][m1-1],iterMoves[1][m2-1]],
-					parsed);
-		for (t=0; t<tbl.length; t++)
-			tables.push(tbl[t]);
+		iterateEmblems(tables, base, poke, levelList, iterItems[i],
+			       [iterMoves[0][m1]-1,iterMoves[1][m2]-1],
+			       levelWeight, parsed);
 	}
 	}
-	}
-	}
-
-	if (parsed.sort.length > 0) {
-		tables.sort(function(a,b) {
-				for (var s=0; s<parsed.sort.length; s++) {
-					var e = parsed.sort[s];
-					var cmp = (a[1][e] - b[1][e]);
-					if (cmp) return cmp;
-				}
-				return 0;
-			});
 	}
 
 	return tables;
