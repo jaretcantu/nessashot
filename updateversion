@@ -1,20 +1,33 @@
 #!/bin/sh
 
 ver=${1?:You must specify a version}
+site=https://unite-db.com
 
 for j in emblems pokemon stats
 do
 	json=${j}.json
 	njson=${json}.$ver
-	if ! test -e $njson
+	if test -e $njson
 	then
-		echo "Could not find $njson" >&2
+		echo "Refusing to replace $json" >&2
 		exit 1
-	fi
-	if test -e $json && ! test -L $json
+	elif ! wget -O $njson $site/$json
+	then
+		echo "Could not fetch $json" >&2
+		exit 1
+	elif test -e $json && ! test -L $json
 	then
 		echo "Refusing to replace real file $json" >&2
 		exit 1
+	# The following are all successes
+	elif cmp $json $njson
+	then
+		# The latest version is the same as the last; simply symlink it
+		rm $njson
+		latest=$(ls -1 ${json}.* | sort -Vr | head -1)
+		ln -nfs $latest $njson
+	else
+		# Update symlink
+		ln -nfs $njson $json
 	fi
-	ln -nfs $njson $json
 done
