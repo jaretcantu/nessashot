@@ -1,6 +1,6 @@
 /* search.js
  * Data structures and algorithms for searching and optimizing Pokemon UNITE
- * Copyright (C) 2021-2022 Jaret Jay Cantu
+ * Copyright (C) 2021-2023 Jaret Jay Cantu
  * Licensed under the AGPL
  */
 

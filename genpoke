@@ -2,7 +2,7 @@
 /* genpoke
  * Generate the pokemon.js include from unite-db.com files (stats.json and
  * pokemon.json) and the preprocessor code accessory (preproc.ini)
- * Copyright (C) 2022 Jaret Jay Cantu
+ * Copyright (C) 2023 Jaret Jay Cantu
  * Licensed under the AGPL
  *
  * Pokemon stat values originally from:
