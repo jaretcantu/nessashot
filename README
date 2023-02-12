@@ -1,0 +1,26 @@
+                            N E S S A ' S   H O T
+
+nessashot is a simulator and modeler for Pokemon UNITE.  It uses data scraped
+from external sources (http://unite-db.com) to graph and display game data.
+
+The goal of this project is to be as portable as possible.  It has no external
+dependencies (other than JavaScript) and makes use of no recent additions to the
+ECMAScript language to ensure maximum compatibility.
+
+This project can be used to model, compare, and optimize various builds.  The
+output is intended to be generic enough that it can be dropped into other
+projects effortlessly.  A command-line interface is provided as a reference.
+
+In order to utilize nessashot fully, you first must generate the necessary
+scripts pokemon.js and emblems.js.  This can be done by running the
+updateversion script to download the most recent versions of the stats, moves,
+and emblems JSON files.  Then, run the genpoke and genemb scripts to create the
+missing JavaScript files.
+
+Another file (preproc.ini) is an INI-style configuration file that can be used
+to better model the JSON file into usable JavaScript.
+
+
+nessashot is licensed under the AGPL (Affero GPL) 3.0.  This ensures that all
+public changes to this project will be shared back to the community.  More
+information about the terms can be found in the LICENSE file.
