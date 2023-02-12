@@ -1226,15 +1226,15 @@ EmblemColor.prototype.getBonus = function(count) {
 	return 0;
 }
 
-function Emblem(family, color, rank, bonus, penalty) {
+function Emblem(family, color, grade, bonus, penalty) {
 	this.family = family;
 	this.color = color;
-	this.rank = Emblem.RANKS[rank];
+	this.grade = Emblem.GRADES[grade];
 	this.bonus = bonus;
 	this.penalty = penalty;
 }
-Emblem.RANKS = {Bronze:0, Silver:1, Gold:2};
-Emblem.RRANKS = ["Bronze", "Silver", "Gold"];
+Emblem.GRADES = {Bronze:0, Silver:1, Gold:2};
+Emblem.RGRADES = ["Bronze", "Silver", "Gold"];
 Emblem.STATS = [ new Stats(30, 1.2, 3, 1.8, 3, 0.003, 0,0,0,0,0,0, 21),
 		 new Stats(40, 1.6, 4, 2.4, 4, 0.005, 0,0,0,0,0,0, 28),
 		 new Stats(50, 2,   5, 3,   5, 0.006, 0,0,0,0,0,0, 35) ];
@@ -1251,7 +1251,7 @@ Emblem.COLORS = {
 		Yellow: new EmblemColor('movement', 3, 0.04, 5, 0.06, 7, 0.12),
 	};
 Emblem.prototype.toString = function() {
-	return Emblem.RRANKS[this.rank] + this.family;
+	return Emblem.RGRADES[this.grade] + this.family;
 }
 
 function EmblemPage(args) {
@@ -1279,10 +1279,10 @@ function EmblemPage(args) {
 				}
 				if (a.bonus)
 					this.stats[a.bonus]+=
-						Emblem.STATS[a.rank][a.bonus];
+						Emblem.STATS[a.grade][a.bonus];
 				if (a.penalty)
 					this.stats[a.penalty]-=
-						Emblem.STATS[a.rank][a.penalty];
+						Emblem.STATS[a.grade][a.penalty];
 			} else if (a.indexOf('=') >= 0) {
 				// For text input
 				var pair = a.split('=');
