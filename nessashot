@@ -21,15 +21,16 @@ function showHelp() {
 	print("          [--specperc %%]                          \\");
 	print("          [-c|--crit (min|avg|max)]                \\");
 	print("          [-o|--optimize items|itemlevels|emblems] \\");
+	print("          [-w|--weight levelweight,...]            \\");
 	print("          [-O|--sort show]                         \\");
-	print("          [-S|--score min,max|score]       \\");
+	print("          [-S|--score min,max|score]               \\");
 	print("          Pokemon                         - Show Pokemon chart");
 }
 
 function parseArgs(args) {
 	var opts = { h: "help", c: "crit", e: "emblem", i: "item", l: "levels",
 		     m: "move", o: "optimize", O: "sort", s: "show",
-		     S: "score" };
+		     S: "score", w: "weight" };
 	var parsed = {
 			levels: [],
 			moves: [],

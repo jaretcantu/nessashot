@@ -4,6 +4,14 @@
  * Licensed under the AGPL
  */
 
+// constants
+var LEVEL_WEIGHT = {
+	jungler: [0, 0, 1, 2, 10, 10, 10, 10, 10, 10, 10, 10, 10, 8, 5],
+	high: [0, 1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 6, 3],
+	low: [0, 1, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 8, 4, 1],
+	expshare: [0, 2, 10, 10, 10, 10, 10, 10, 10, 10, 10, 9, 6, 1, 0],
+};
+
 // classes
 
 function Calc(name, prereq, func) {
@@ -360,6 +368,10 @@ function parseOption(parsed, arg, args, a) {
 			throw("Invalid special tank percentage: " + arg);
 		parsed.specialperc = arg / 100.0;
 		break;
+	case 'weight':
+		arg = args[++a];
+		parsed.levelWeight = arg;
+		break;
 	default:
 		throw("Unknown option: " + arg);
 	}
@@ -422,7 +434,7 @@ function removeCommonLabels(label0, common) {
 	return label;
 }
 
-function calcSortFitness(entry, base, levels, parsed) {
+function calcSortFitness(entry, base, levels, levelWeight, parsed) {
 	var fitness = 0;
 	for (var i=0; i<parsed.sort.length; i++) {
 		var s = parsed.sort[i];
@@ -432,15 +444,16 @@ function calcSortFitness(entry, base, levels, parsed) {
 		for (var l=0; l<levels.length; l++) {
 			var lev = levels[l];
 			var bs = base[lev][s];
-			newfit+= ((entry[lev][s] - bs) / bs);
+			newfit+= ((entry[lev][s] - bs) / bs) * levelWeight[l+1];
 		}
-		fitness+= newfit;
+		fitness+= newfit / levelWeight[0];
 	}
 	return fitness;
 }
 
 function emblemExpand(tuples, list, colCon, statCon, pos,
-		      tables, base, poke, levelList, items, moves, parsed) {
+		      tables, base, poke, levelList, items, moves,
+		      levelWeight, parsed) {
 	var t = tuples[pos];
 	for (var amt=0; amt<=t[1]; amt++) {
 		if (amt) {
@@ -458,7 +471,8 @@ function emblemExpand(tuples, list, colCon, statCon, pos,
 						return;
 				// if everything passed, run the page
 				iterateEmblem(tables, base, poke, levelList,
-					      items, page, moves, parsed);
+					      items, page, moves, levelWeight,
+					      parsed);
 				// terminate this branch; nothing more to add
 				// here or any higher position
 				return;
@@ -468,20 +482,20 @@ function emblemExpand(tuples, list, colCon, statCon, pos,
 			emblemExpand(tuples, list.slice(), // copy
 				     colCon, statCon, pos+1,
 				     tables, base, poke, levelList, items,
-				     moves, parsed);
+				     moves, levelWeight, parsed);
 		}
 	}
 }
 
 function iterateEmblem(tables, base, poke, levelList, items, emblems,
-		       moves, parsed) {
+		       moves, levelWeight, parsed) {
 	var tbl = calcTables(poke, levelList, items, emblems,
-			     moves, parsed);
+			     moves, levelWeight, parsed);
 	for (t=0; t<tbl.length; t++) {
 		var tt = tbl[t];
 		if (parsed.sort.length > 0) {
 			var fitness = calcSortFitness(tt, base, levelList,
-							parsed);
+							levelWeight, parsed);
 			var append = true;
 			tt.push(fitness);
 			for (var s=0; s<tables.length; s++) {
@@ -512,7 +526,8 @@ function iterateEmblem(tables, base, poke, levelList, items, emblems,
 	}
 }
 
-function iterateEmblems(tables, base, poke, levelList, items, moves, parsed) {
+function iterateEmblems(tables, base, poke, levelList, items, moves,
+			levelWeight, parsed) {
 	if (parsed.search == 'emblems') {
 		// Create a simpler constraints list
 		var colCon = {};
@@ -539,16 +554,17 @@ function iterateEmblems(tables, base, poke, levelList, items, moves, parsed) {
 		}
 		emblemExpand(eTuples, [], colCon, statCon, 0,
 			     tables, base, poke, levelList, items,
-			     moves, parsed);
+			     moves, levelWeight, parsed);
 	} else { // no emblem search
 		iterateEmblem(tables, base, poke, levelList, items,
 			      (isDefined(parsed.emblems) ?
 				new EmblemPage(parsed.emblems) : null),
-			      moves, parsed);
+			      moves, levelWeight, parsed);
 	}
 }
 
-function calcTable(poke, levels, items, parsed, score, emblems, moves) {
+function calcTable(poke, levels, items, parsed, score, emblems, moves,
+		   levelWeight) {
 	var label = [poke.name, items.join("/"), emblems, 'Score='+score];
 	var result = [label];
 
@@ -575,7 +591,7 @@ function calcTable(poke, levels, items, parsed, score, emblems, moves) {
 	return result;
 }
 
-function calcTables(poke, levels, items, emblems, moves, parsed) {
+function calcTables(poke, levels, items, emblems, moves, levelWeight, parsed) {
 	var results = [];
 	var hints;
 	var scoreMax, scoreMin, i;
@@ -597,7 +613,7 @@ function calcTables(poke, levels, items, emblems, moves, parsed) {
 
 	for (i=scoreMin; i<=scoreMax; i++)
 		results.push(calcTable(poke, levels, items, parsed, i, emblems,
-				       moves));
+				       moves, levelWeight));
 
 	return results;
 }
@@ -801,11 +817,15 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 				levelWeight = LEVEL_WEIGHT.low.slice();
 				break;
 			}
+		} else if (parsed.levelweight.indexOf(',') >= 0) {
+			// parse CSV
+			levelWeight = parsed.levelweight.split(',');
 		} else {
-			// either parse a CSV or look-up its word name
+			// look-up its word name and copy the array
 			levelWeight = LEVEL_WEIGHT[parsed.levelweight].slice();
 		}
-		// since the level index starts at 1, store sum at 0 for convennc
+		
+		// since the level index starts at 1, store sum at 0 for conv
 		var sum = 0;
 		for (i=0; i<levelList.length; i++)
 			sum+= levelWeight[levelList[i]-1];
