@@ -1329,7 +1329,14 @@ EmblemPage.prototype.addStats = function(poke) {
 			poke.stats[c]+= baseStats[c] * bns;
 		}
 	}
-	poke.stats.add(this.stats);
+	for (var i=0; i<Stats.LIST.length; i++) {
+		var s = Stats.LIST[i];
+		// emblem stats are rounded up, apparently
+		if (Stats.BASIC_STATS.contains(s))
+			poke.stats[s]+= Math.round(this.stats[s]);
+		else
+			poke.stats[s]+= this.stats[s];
+	}
 }
 
 function LearnSet(level, upgrade, moves) {
@@ -1435,6 +1442,11 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
 	for (var i=0; i<this.items.length; i++) {
 		this.hints|= this.items[i].item.hints;
 		this.items[i].addStats(this.stats);
+	}
+	// int all stats
+	for (i=0; i<Stats.BASIC_STATS.length; i++) {
+		var s = Stats.BASIC_STATS[i];
+		this.stats[s] = Math.floor(this.stats[s]);
 	}
 }
 Champion.prototype.init = function() {
