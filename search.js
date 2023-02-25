@@ -1,5 +1,6 @@
 /* search.js
  * Data structures and algorithms for searching and optimizing Pokemon UNITE
+ * https://github.com/jaretcantu/nessashot
  * Copyright (C) 2021-2023 Jaret Jay Cantu
  * Licensed under the AGPL
  */

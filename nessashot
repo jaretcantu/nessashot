@@ -1,6 +1,7 @@
 #!/usr/bin/js
 /* nessashot
  * Commandline interface for Pokemon UNITE search and grapher
+ * https://github.com/jaretcantu/nessashot
  * Copyright (C) 2021-2023 Jaret Jay Cantu
  * Licensed under the AGPL
  */

@@ -269,6 +269,7 @@ function run(args) {
 
 	// print header
 	print("// nessashot Pokemon stat listing -- Generated file");
+	print("// https://github.com/jaretcantu/nessashot");
 	print("// " + (new Date()));
 	print("Pokemon.LIST = {");
 

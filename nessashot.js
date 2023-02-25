@@ -1,5 +1,6 @@
 /* nessashot.js
  * Pokemon UNITE build simulator and comparer
+ * https://github.com/jaretcantu/nessashot
  * Copyright (C) 2021-2023 Jaret Jay Cantu
  * Licensed under the AGPL
  */
