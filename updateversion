@@ -3,7 +3,7 @@
 ver=${1?:You must specify a version}
 site=https://unite-db.com
 
-for j in emblems pokemon stats
+for j in emblems held_items pokemon stats
 do
 	json=${j}.json
 	njson=${json}.$ver
