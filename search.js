@@ -624,8 +624,15 @@ function createTables(parsed) {
 		throw("Failed to parse arguments");
 	if (!isDefined(parsed.pokemon))
 		throw("No Pokemon specified");
-	if (parsed.show.length == 0)
+	// set some sane defaults so that parsed does not need to be well-formed
+	if (!parsed.show || parsed.show.length == 0)
 		parsed.show = ["stats"];
+	if (!parsed.sort)
+		parsed.sort = [];
+	if (!parsed.items)
+		parsed.items = [];
+	if (!parsed.moves)
+		parsed.moves = [1,1];
 	var levelList = (parsed.levels && parsed.levels.length > 0 ?
 					parsed.levels :
 					[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] );
