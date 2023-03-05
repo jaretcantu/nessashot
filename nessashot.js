@@ -60,6 +60,7 @@ function Stats(args) {
 		this.movement = 600; /* just to show changes with items, which
 				      * are quite large for FloatStone, so go
 				      * with the Defense formula "average" */
+		this.healing = 1;
 	} else { // Assume object/associative array
 		Stats.call(this);
 		// Transfer all elements from arguments to stats object
@@ -74,7 +75,10 @@ Stats.LIST = ["health", "attack", "defense", "spattack", "spdefense",
 		// Stats that are probably in progression but unknown currently
 		"charge", "movement",
 		// Stats that are probably outside of progression and item only
-		"critdamage", "recovery"];
+		"critdamage", "recovery",
+		// Phony stats that are only for items right now
+		"healing",
+		];
 Stats.BASIC_STATS = ["health", "attack", "defense", "spattack", "spdefense",
 			"movement"];
 Stats.prototype.toString = function() {
@@ -455,6 +459,18 @@ function HealingMove(name, pmux, smux, lev, flat, cd) {
 }
 HealingMove.prototype = new HealthModMove();
 HealingMove.prototype.constructor = HealingMove;
+
+function AllyHealingMove(name, pmux, smux, lev, flat, cd) {
+	if (arguments.length == 0) return;
+	HealingMove.apply(this, arguments);
+}
+AllyHealingMove.prototype = new HealingMove();
+AllyHealingMove.prototype.constructor = AllyHealingMove;
+AllyHealingMove.prototype.calc = function(pkmn) {
+	var h = HealingMove.prototype.calc.apply(this, arguments);
+	h = Math.floor(h * pkmn.stats.healing);
+	return h;
+}
 
 Move.BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0).setCrit();
 Move.CRITLESS_BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0);
