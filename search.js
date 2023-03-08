@@ -633,6 +633,12 @@ function createTables(parsed) {
 		parsed.items = [];
 	if (!parsed.moves)
 		parsed.moves = [1,1];
+	if (!isDefined(parsed.itemdefault))
+		parsed.itemdefault = 30;
+	if (!isDefined(parsed.itemlevels))
+		parsed.itemlevels = {};
+	if (!isDefined(parsed.specialperc))
+		parsed.specialperc = 0.5;
 	var levelList = (parsed.levels && parsed.levels.length > 0 ?
 					parsed.levels :
 					[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15] );
