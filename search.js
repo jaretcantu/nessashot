@@ -818,7 +818,7 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 	}
 
 	var levelWeight;
-	if (parsed.search) {
+	if (parsed.sort) {
 		if (!parsed.levelweight) {
 			switch (poke.role) {
 			case Pokemon.ALLROUNDER:
