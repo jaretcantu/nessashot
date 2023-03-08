@@ -452,28 +452,35 @@ function calcSortFitness(entry, base, levels, levelWeight, parsed) {
 	return fitness;
 }
 
+function checkEmblemExpand(list, colCon, statCon, tables,
+			   base, poke, levelList, items, moves,
+			   levelWeight, parsed) {
+	if (list.length < 10) return false;
+	var page = new EmblemPage(list);
+	// check effects against required constraints
+	for (var c in colCon)
+		if (!isDefined(page.colors[c]) ||
+		    page.colors[c] < colCon[c])
+			return true;
+	for (c in statCon)
+		if (page.stats[c] < statCon[c])
+			return true;
+	iterateEmblem(tables, base, poke, levelList, items, page, moves,
+		      levelWeight, parsed);
+	return true;
+}
+
 function emblemExpand(tuples, list, colCon, statCon, pos,
 		      tables, base, poke, levelList, items, moves,
-		      levelWeight, parsed) {
+		      levelWeight, parsed, finalFunc) {
 	var t = tuples[pos];
 	for (var amt=0; amt<=t[1]; amt++) {
 		if (amt) {
 			list.push(t[0]);
 			// Check for end on each addition
-			if (list.length == 10) {
-				var page = new EmblemPage(list);
-				// check effects against required constraints
-				for (var c in colCon)
-					if (!isDefined(page.colors[c]) ||
-					    page.colors[c] < colCon[c])
-						return;
-				for (c in statCon)
-					if (page.stats[c] < statCon[c])
-						return;
-				// if everything passed, run the page
-				iterateEmblem(tables, base, poke, levelList,
-					      items, page, moves, levelWeight,
-					      parsed);
+			if (finalFunc(list, colCon, statCon, tables, base,
+				      poke, levelList, items, moves,
+				      levelWeight, parsed)) {
 				// terminate this branch; nothing more to add
 				// here or any higher position
 				return;
@@ -483,7 +490,7 @@ function emblemExpand(tuples, list, colCon, statCon, pos,
 			emblemExpand(tuples, list.slice(), // copy
 				     colCon, statCon, pos+1,
 				     tables, base, poke, levelList, items,
-				     moves, levelWeight, parsed);
+				     moves, levelWeight, parsed, finalFunc);
 		}
 	}
 }
@@ -544,18 +551,72 @@ function iterateEmblems(tables, base, poke, levelList, items, moves,
 		}
 		// Put emblem list into searchable object
 		var eTuples = [];
+		var colorCount = {};
+		for (var c in Emblem.COLORS)
+			colorCount[c] = [];
 		for (e=0; e<parsed.emblems.length; e++) {
 			var pair = parsed.emblems[e].split('=');
 			// If the pair was a simple emblem, set count to 1
 			if (pair.length == 1) pair[1] = 1;
 			if (!isDefined(Emblem.LIST[pair[0]]))
 				throw("No such emblem: " + pair[0]);
-			pair[0] = Emblem.LIST[pair[0]];
+			var emb = Emblem.LIST[pair[0]];
+			pair[0] = emb;
 			eTuples.push(pair);
+			for (c=0; c<emb.color.length; c++)
+				colorCount[emb.color[c]].push(pair);
+		}
+		// Determine best optimization color
+		var bestCol = null;
+		var bestOpt = 0; // do instead of -1 for better error condition
+		for (c in colCon) {
+			/* Running factorials here may very likely overflow
+			 * JavaScript math. Create a poor estimation of which
+			 * combination is the worst.
+			 */
+			var rating = colorCount[c].length * colCon[c];
+			if (bestOpt < rating) {
+				bestOpt = rating;
+				bestCol = c;
+			}
+		}
+
+		var finalFunc;
+		if (bestOpt) {
+			// Break colors into two tuples
+			var restOfEmblems = [];
+			for (e=eTuples.length-1; e>=0; e--) {
+				if (!eTuples[e][0].color.contains(bestCol)) {
+					// move match into separate list
+					restOfEmblems.push(eTuples[e]);
+					eTuples.splice(e, 1);
+				}
+			}
+			// Create an intermediate function to iterate the rest
+			finalFunc = function(list, colCon, statCon, tables,
+					     base, poke, levelList, items,
+					     moves, levelWeight, parsed) {
+				var thisFunc = arguments.callee;
+				// get a list of limit emblems from original set
+				if (list.length < thisFunc.limit)
+					return false;
+				// iterate over remaining colors up to 10
+				emblemExpand(thisFunc.restOfEmblems, list,
+					     colCon, statCon, 0,
+					     tables, base, poke,
+					     levelList, items, moves,
+					     levelWeight, parsed,
+					     checkEmblemExpand);
+				return true;
+			};
+			finalFunc.limit = colCon[bestCol];
+			finalFunc.restOfEmblems = restOfEmblems;
+		} else { // No color constraints
+			finalFunc = checkEmblemExpand;
 		}
 		emblemExpand(eTuples, [], colCon, statCon, 0,
 			     tables, base, poke, levelList, items,
-			     moves, levelWeight, parsed);
+			     moves, levelWeight, parsed, finalFunc);
 	} else { // no emblem search
 		iterateEmblem(tables, base, poke, levelList, items,
 			      (isDefined(parsed.emblems) ?
