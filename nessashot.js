@@ -57,7 +57,7 @@ function Stats(args) {
 		//     known to be different as of yet.
 		this.critdamage = 1; // additional damage when crit
 		this.charge = 1; // there is some per-pokemon rate
-		this.movement = 600; /* just to show changes with items, which
+		this.movement = 0;   /* just to show changes with items, which
 				      * are quite large for FloatStone, so go
 				      * with the Defense formula "average" */
 		this.healing = 1;
@@ -530,9 +530,9 @@ function Emblem(family, color, grade, bonus, penalty) {
 }
 Emblem.GRADES = {Bronze:0, Silver:1, Gold:2};
 Emblem.RGRADES = ["Bronze", "Silver", "Gold"];
-Emblem.STATS = [ new Stats(30, 1.2, 3, 1.8, 3, 0.003, 0,0,0,0,0,0, 21),
-		 new Stats(40, 1.6, 4, 2.4, 4, 0.005, 0,0,0,0,0,0, 28),
-		 new Stats(50, 2,   5, 3,   5, 0.006, 0,0,0,0,0,0, 35) ];
+Emblem.STATS = [ new Stats(30, 1.2, 3, 1.8, 3, 0.003, 0,0.003,0,0,0,0, 21),
+		 new Stats(40, 1.6, 4, 2.4, 4, 0.005, 0,0.005,0,0,0,0, 28),
+		 new Stats(50, 2,   5, 3,   5, 0.006, 0,0.006,0,0,0,0, 35) ];
 Emblem.COLORS = {
 		Black: new EmblemColor('cdr', 3, 0.01, 5, 0.02, 7, 0.04),
 		Blue: new EmblemColor('defense', 2, 0.02, 4, 0.04, 6, 0.08),
