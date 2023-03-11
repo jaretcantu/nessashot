@@ -521,12 +521,13 @@ EmblemColor.prototype.getBonus = function(count) {
 	return 0;
 }
 
-function Emblem(family, color, grade, bonus, penalty) {
+function Emblem(family, color, grade, bonus, penalty, mux) {
 	this.family = family;
 	this.color = color;
 	this.grade = Emblem.GRADES[grade];
 	this.bonus = bonus;
 	this.penalty = penalty;
+	this.multiplier = (arguments.length<6 ? 1 : mux);
 }
 Emblem.GRADES = {Bronze:0, Silver:1, Gold:2};
 Emblem.RGRADES = ["Bronze", "Silver", "Gold"];
@@ -547,6 +548,13 @@ Emblem.COLORS = {
 	};
 Emblem.prototype.toString = function() {
 	return Emblem.RGRADES[this.grade] + this.family;
+}
+Emblem.prototype.addStats = function(stats) {
+	var grade = Emblem.STATS[this.grade];
+	if (this.bonus)
+		stats[this.bonus]+= grade[this.bonus]*this.multiplier;
+	if (this.penalty)
+		stats[this.penalty]-= grade[this.penalty]*this.multiplier;
 }
 
 function EmblemPage(args) {
@@ -572,12 +580,7 @@ function EmblemPage(args) {
 						this.colors[cl]++;
 					}
 				}
-				if (a.bonus)
-					this.stats[a.bonus]+=
-						Emblem.STATS[a.grade][a.bonus];
-				if (a.penalty)
-					this.stats[a.penalty]-=
-						Emblem.STATS[a.grade][a.penalty];
+				a.addStats(this.stats);
 			} else if (a.indexOf('=') >= 0) {
 				// For text input
 				var pair = a.split('=');

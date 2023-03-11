@@ -5,6 +5,8 @@
  * Licensed under the AGPL
  */
 
+load("nessashot.js");
+
 // file utility functions
 function readJson(f) {
 	// read file
@@ -70,11 +72,18 @@ function run(args) {
 		var color1 = e.color1;
 		var color2 = (e.color2 ? e.color2 : null);
 		var stats = e.stats[0];
-		var bonus, penalty;
+		var bonus = '';
+		var penalty = '';
+		var mux = '';
 		for (var s in stats) {
 			var ss = STAT_MAP[s] ? STAT_MAP[s] : s;
 			if (stats[s] > 0) {
 				bonus = ss;
+				var gStat = Emblem.STATS[Emblem.GRADES[grade]];
+				var ratio = stats[s]/gStat[ss];
+				// NB: Some values are percentages, thus 100x
+				if (ratio != 1 && ratio != 100)
+					mux = ', ' + (ratio).toFixed(1);
 			} else if (stats[s] < 0) {
 				penalty = ss;
 			} else {
@@ -85,7 +94,7 @@ function run(args) {
 		print("\t" + name + ': new Emblem("' + family +
 			'", ["' + color1 + (color2 ? '", "' + color2 : '') +
 			'"], "' + grade + '", "' + bonus +
-			'", "' + penalty + '"),');
+			'", "' + penalty + '"' + mux + '),');
 	}
 
 	// print footer
