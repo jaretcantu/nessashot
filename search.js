@@ -747,7 +747,7 @@ MOVESTRING:		for (ls=0; ls<2; ls++) {
 
 	// fill out specified items
 	var iterItems = []; // array of triples of pairs
-	var noItem = ['',0];
+	var noItem = ['',1];
 
 	if (parsed.search == 'itemlevels') {
 		// Determine which/how many item levels will be searched
