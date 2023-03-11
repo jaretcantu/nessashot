@@ -9,7 +9,7 @@ do
 	njson=${json}.$ver
 	if test -e $njson
 	then
-		echo "Refusing to replace $json" >&2
+		echo "Refusing to replace $njson" >&2
 		exit 1
 	elif ! wget -O $njson $site/$json
 	then
