@@ -180,16 +180,16 @@ TimedItemPassive.prototype.checkCondition = function(cond, pkmn, item, foe) {
 }
 TimedItemPassive.prototype.cooldown = function(pkmn) { return this.time; }
 
-function MoveItemPassive(cond) {
-	TimedItemPassive.call(this, cond, MoveItemPassive.useMove, 0);
+function EffectItemPassive(cond, time) {
+	TimedItemPassive.call(this, cond, EffectItemPassive.useEffect, time);
 }
-MoveItemPassive.prototype = new TimedItemPassive();
-MoveItemPassive.prototype.constructor = MoveItemPassive;
-MoveItemPassive.useMove = function(pkmn, item, foe) {
+EffectItemPassive.prototype = new TimedItemPassive();
+EffectItemPassive.prototype.constructor = EffectItemPassive;
+EffectItemPassive.useEffect = function(pkmn, item, foe) {
 	// Execute a move-like effect
 	// XXX TODO Determine if movelike is offensive or defensive
 }
-MoveItemPassive.prototype.getItemState = function(pkmn) {
+EffectItemPassive.prototype.getItemState = function(pkmn) {
 	for (var i=0; i<pkmn.items.length; i++) {
 		var is = pkmn.items[i];
 		if (is.item.passive == this)
@@ -197,34 +197,29 @@ MoveItemPassive.prototype.getItemState = function(pkmn) {
 	}
 	throw("Could not find item state for " + this);
 }
-MoveItemPassive.prototype.getMove = function(pkmn) {
+EffectItemPassive.prototype.getEffect = function(pkmn) {
 	// Normally, the item state is passed in through proc()
 	return this.getItemState(pkmn).unlock;
 }
-MoveItemPassive.prototype.calc = function(pkmn) {
-	return this.getMove(pkmn).calc(pkmn);
-}
-MoveItemPassive.prototype.cooldown = function(pkmn) {
-	return this.getMove(pkmn).getCoolDown(pkmn);
+EffectItemPassive.prototype.calc = function(pkmn) {
+	return this.getEffect(pkmn).calc(pkmn);
 }
 
-function BasicMoveItemPassive() {
-	MoveItemPassive.call(this, Passive.BASIC);
+function BasicEffectItemPassive(time) {
+	EffectItemPassive.call(this, Passive.BASIC, time);
 }
-BasicMoveItemPassive.prototype = new MoveItemPassive();
-BasicMoveItemPassive.prototype.constructor = BasicMoveItemPassive;
-BasicMoveItemPassive.prototype.calc = function(pkmn) {
-	return this.getMove(pkmn).calc(pkmn);
-}
-BasicMoveItemPassive.prototype.checkCondition = function(cond, pkmn, item, foe){
+BasicEffectItemPassive.prototype = new EffectItemPassive();
+BasicEffectItemPassive.prototype.constructor = BasicEffectItemPassive;
+BasicEffectItemPassive.prototype.checkCondition = function(cond, pkmn,
+							   item, foe) {
 	// Requires a cooldown to set up and a basic to proc
 	if (cond & Passive.INIT) {
 		item.cooldown = -1; // Set off until a cooldown is used
 	} else if (item.cooldown >= 0 && (cond & Passive.COOLDOWN)) {
 		item.cooldown = 0;
 	} else {
-		return MoveItemPassive.prototype.checkCondition(cond, pkmn,
-								item, foe);
+		return EffectItemPassive.prototype.checkCondition(cond, pkmn,
+								  item, foe);
 	}
 	return false;
 }
@@ -325,7 +320,91 @@ BoostedProc.EVERY_3RD = new UsageBoostedProc(3);
 BoostedProc.EVERY_4TH = new UsageBoostedProc(4);
 BoostedProc.FIVE_SECONDS = new TimedBoostedProc(5);
 
-function Move(name, cd) {
+function Effect() {
+}
+Effect.prototype.calc = function(pkmn) { return 0; }
+Effect.prototype.canCrit = function() { return false; }
+Effect.toString = function() { return "Effect()"; }
+
+function StatusEffect(dur, flatStats, lvlStats) {
+	if (arguments.length == 0) return;
+	this.duration = dur;
+	this.flatStats = flatStats;
+	this.lvlStats = lvlStats;
+}
+StatusEffect.prototype = new Effect();
+StatusEffect.prototype.constructor = StatusEffect;
+
+function BuffEffect(dur, flatStats, lvlStats) {
+	if (arguments.length == 0) return;
+	StatusEffect.apply(this, arguments);
+}
+BuffEffect.prototype = new StatusEffect();
+BuffEffect.prototype.constructor = BuffEffect;
+
+function DebuffEffect(dur, flatStats, lvlStats) {
+	if (arguments.length == 0) return;
+	StatusEffect.apply(this, arguments);
+}
+DebuffEffect.prototype = new StatusEffect();
+DebuffEffect.prototype.constructor = DebuffEffect;
+
+function HealthModEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	this.physMultiplier = pmux;
+	this.specMultiplier = smux;
+	this.levelScaling = lev;
+	this.baseDamage = flat;
+	this.maxHealth = 0;
+	this.remHealth = 0;
+}
+HealthModEffect.prototype = new Effect();
+HealthModEffect.prototype.constructor = HealthModEffect;
+HealthModEffect.prototype.setPerc = function(rh, mh) {
+	this.remHealth = rh;
+	this.maxHealth = mh;
+	return this;
+}
+HealthModEffect.prototype.calc = function(pkmn) {
+	return	this.physMultiplier * pkmn.stats.attack +
+		this.specMultiplier * pkmn.stats.spattack +
+		this.levelScaling * (pkmn.level-1) +
+		this.baseDamage;
+}
+
+function DamagingEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	HealthModEffect.apply(this, arguments);
+	this.crittable = false;
+}
+DamagingEffect.prototype = new HealthModEffect();
+DamagingEffect.prototype.constructor = DamagingEffect;
+DamagingEffect.prototype.setCrit = function() {
+	this.crittable = 1;
+	return this;
+}
+DamagingEffect.prototype.canCrit = function() { return this.crittable; }
+
+function HealingEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	HealthModEffect.apply(this, arguments);
+}
+HealingEffect.prototype = new HealthModEffect();
+HealingEffect.prototype.constructor = HealingEffect;
+
+function AllyHealingEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	HealingEffect.apply(this, arguments);
+}
+AllyHealingEffect.prototype = new HealingEffect();
+AllyHealingEffect.prototype.constructor = AllyHealingEffect;
+AllyHealingEffect.prototype.calc = function(pkmn) {
+	var h = HealingEffect.prototype.calc.apply(this, arguments);
+	h = Math.floor(h * pkmn.stats.healing);
+	return h;
+}
+
+function Move(name, cd, effects) {
 	if (arguments.length == 0) return;
 	this.name = name;
 	this.cooldown = cd;
@@ -334,6 +413,27 @@ function Move(name, cd) {
 	this.resetsBoosted = false;
 	this.lockout = 0;
 	this.cdx = 0;
+	this.crittable = 0;
+	if (!isArray(effects)) {
+		if (isNaN(effects)) {
+			this.effects = [effects];
+		} else {
+			/* Instead of an array, we have received a times X
+			 * effect argument list, so reformulate this into an
+			 * array. */
+			var effs = [];
+			for (var e=2; e<arguments.length; e+=2) {
+				var count = arguments[e];
+				var eff = arguments[1+e];
+				// multiply effect count times
+				for (var i=0; i<count; i++)
+					effs.push(eff);
+			}
+			this.effects = effs;
+		}
+	} else { // already an array
+		this.effects = effects;
+	}
 }
 Move.prototype.toString = function() {
 	return "Move(" + this.name + ")";
@@ -358,122 +458,38 @@ Move.prototype.setBoost = function() {
 	this.resetsBoosted = true;
 	return this;
 }
-Move.prototype.calc = function(pkmn) {
-	return 0;
-}
-Move.prototype.canCrit = function() {
-	return false;
-}
-
-function ComboMove(name, cd, moves) {
-	if (arguments.length == 0) return;
-	Move.call(this, name, cd);
-	if (!isArray(moves)) {
-		/* Instead of an array, we have received a times X move string
-		 * argument list, so reformulate this into an array. */
-		var count = moves;
-		moves = new Array(count);
-		for (var m=0; m<count; m++)
-			moves[m] = arguments[3];
-	}
-	this.moves = moves;
-}
-ComboMove.prototype = new Move();
-ComboMove.prototype.constructor = ComboMove;
-ComboMove.prototype.calc = function(pkmn) {
-	var total = 0;
-	for (var m=0; m<this.moves.length; m++) {
-		try {
-		total+= pkmn.pokemon.moveset[this.moves[m]].calc(pkmn);
-		} catch(e) { throw(this + ".calc() failed on " +
-					this.moves[m] + ": " + e);
-		}
-	}
-	return total;
-}
-
-function StatusMove(name, dur, flatStats, lvlStats, cd) {
-	if (arguments.length == 0) return;
-	Move.call(this, name, cd);
-	this.duration = dur;
-	this.flatStats = flatStats;
-	this.lvlStats = lvlStats;
-}
-StatusMove.prototype = new Move();
-StatusMove.prototype.constructor = StatusMove;
-
-function BuffMove(name, dur, flatStats, lvlStats, cd) {
-	if (arguments.length == 0) return;
-	StatusMove.apply(this, arguments);
-}
-BuffMove.prototype = new StatusMove();
-BuffMove.prototype.constructor = BuffMove;
-
-function DebuffMove(name, dur, flatStats, lvlStats, cd) {
-	if (arguments.length == 0) return;
-	StatusMove.apply(this, arguments);
-}
-DebuffMove.prototype = new StatusMove();
-DebuffMove.prototype.constructor = DebuffMove;
-
-function HealthModMove(name, pmux, smux, lev, flat, cd) {
-	if (arguments.length == 0) return;
-	Move.call(this, name, cd);
-	this.physMultiplier = pmux;
-	this.specMultiplier = smux;
-	this.levelScaling = lev;
-	this.baseDamage = flat;
-	this.maxHealth = 0;
-	this.remHealth = 0;
-}
-HealthModMove.prototype = new Move();
-HealthModMove.prototype.constructor = HealthModMove;
-HealthModMove.prototype.setPerc = function(rh, mh) {
-	this.remHealth = rh;
-	this.maxHealth = mh;
-	return this;
-}
-HealthModMove.prototype.calc = function(pkmn) {
-	return	this.physMultiplier * pkmn.stats.attack +
-		this.specMultiplier * pkmn.stats.spattack +
-		this.levelScaling * (pkmn.level-1) +
-		this.baseDamage;
-}
-
-function DamagingMove(name, pmux, smux, lev, flat, cd) {
-	if (arguments.length == 0) return;
-	HealthModMove.apply(this, arguments);
-	this.crittable = false;
-}
-DamagingMove.prototype = new HealthModMove();
-DamagingMove.prototype.constructor = DamagingMove;
-DamagingMove.prototype.setCrit = function() {
+Move.prototype.setCrit = function() {
 	this.crittable = 1;
 	return this;
 }
-DamagingMove.prototype.canCrit = function() { return this.crittable; }
+Move.prototype.calc = function(pkmn) {
+	var total = 0;
+	for (var e=0; e<this.effects.length; e++)
+		total+= pkmn.pokemon.moveset[this.effects[e]].calc(pkmn);
+	return total;
+}
+Move.prototype.canCrit = function() {
+	return this.crittable;
+}
 
-function HealingMove(name, pmux, smux, lev, flat, cd) {
+function AttackMove(name, effects) {
 	if (arguments.length == 0) return;
-	HealthModMove.apply(this, arguments);
+	var args = []; // quick argument copy
+	for (var a=0; a<arguments.length; a++)
+		args[a] = arguments[a];
+	args.splice(1, 0, 0); // insert 0 for cooldown time
+	Move.apply(this, args);
 }
-HealingMove.prototype = new HealthModMove();
-HealingMove.prototype.constructor = HealingMove;
-
-function AllyHealingMove(name, pmux, smux, lev, flat, cd) {
-	if (arguments.length == 0) return;
-	HealingMove.apply(this, arguments);
-}
-AllyHealingMove.prototype = new HealingMove();
-AllyHealingMove.prototype.constructor = AllyHealingMove;
-AllyHealingMove.prototype.calc = function(pkmn) {
-	var h = HealingMove.prototype.calc.apply(this, arguments);
-	h = Math.floor(h * pkmn.stats.healing);
-	return h;
+AttackMove.prototype = new Move();
+AttackMove.prototype.constructor = AttackMove;
+AttackMove.prototype.getCoolDown = function(pkmn) {
+	return pkmn.ticksPerBasic() / TICKS_PER_SECOND;
 }
 
-Move.BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0).setCrit();
-Move.CRITLESS_BASIC = new DamagingMove("Basic", 1, 0, 0, 0, 0);
+Move.BASIC_DMG = new DamagingEffect(1,0,0,0).setCrit();
+Move.BASIC = new AttackMove("Basic", "BasicDamage").setCrit();
+Move.CRITLESS_BASIC_DMG = new DamagingEffect(1,0,0,0);
+Move.CRITLESS_BASIC = new AttackMove("Basic", "BasicDamageCritless");
 
 function Item(name, prog, unlocks, passive) {
 	if (arguments.length == 0) return;

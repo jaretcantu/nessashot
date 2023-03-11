@@ -159,7 +159,7 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 			continue;
 		} else if (lbl=='Damage - Boosted') {
 			// convenience replacement
-			lbl = 'Boosted';
+			lbl = 'BoostedDamage';
 		} else if (lbl.match(/^Damage/)) {
 			lbl = nam + lbl.substring(6);
 		} else {
@@ -189,15 +189,17 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 			}
 		}
 		// Just assume everything is damaging; it can be changed later.
-		print(pad + q + lbl + q + ": new DamagingMove(\"" + lbl +
-			"\", " +
+		print(pad + q + lbl + q + ": new DamagingEffect(" +
 		      (p.damage_type == 'Physical' ? rt + ",0" : "0," + rt) +
 		      ", " + $(m,pfx+'slider') + ", " + $(m,pfx+'base') +
-		      ", " + cd + ")" + (lbl == 'Boosted'?'.setCrit()':'') +",");
+		      ")" + (lbl == 'BoostedDamage'?'.setCrit()':'') +",");
+		if (lbl == 'BoostedDamage')
+			print(pad + 'Boosted: new AttackMove("Boosted", ' +
+			      '"BoostedDamage").setCrit(),');
 		hpComp.push(lbl);
 	}
 
-	// Fill the learnset with default ComboMoves of all damage values
+	// Fill the learnset with default Moves of all damage values
 	var mi = 1+Math.floor((ALL_MOVES.indexOf(move)-1)/3);
 	if (mi < 0) return; // only care about real moves
 
@@ -205,10 +207,6 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 	for (var hpc=0; hpc<hpComps.length; hpc++) {
 		hpComp = hpComps[hpc];
 		switch (hpComp.length) {
-		case 1:
-			if (ls != '') ls+= ', ';
-			ls+= '"' + hpComp[0] + '"';
-			break;
 		case 0:
 			if (hpc != 0) {
 				if (hpc == 1 && move.match(/^upgrade/))
@@ -216,9 +214,14 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 				break;
 			}
 			// fallthrough and make dummy move as a placeholder
+		case 1:
+			// Don't stringify single-length arrays anymore
+			//if (ls != '') ls+= ', ';
+			//ls+= '"' + hpComp[0] + '"';
+			//break;
 		default:
 			if (ls != '') ls+= ', ';
-			ls+= 'new ComboMove("' + m.name.replaceAll(/[- ]/g, '')+
+			ls+= 'new Move("' + m.name.replaceAll(/[- ]/g, '')+
 				(hpc>0 ? '+' : '') +
 				'", ' + ppn + 'cd, [';
 			for (var h=0; h<hpComp.length; h++) {
@@ -334,6 +337,7 @@ function run(args) {
 		// Move library: run replacements on numbers
 		if (typeof(c.learnset) === 'undefined' || c.learnset.length<1) {
 			var pad = (PREPROC_TARGET ? '' : "\t\t\t");
+			print(pad + "BasicDamage: Move.BASIC_DMG,");
 			print(pad + "Basic: Move.BASIC,");
 			// Initialize a new Pokemon with all possible damage
 			// values that can be found in the JSON.
