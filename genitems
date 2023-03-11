@@ -1,0 +1,174 @@
+#!/usr/bin/js
+/* genitems
+ * Generate the items.js include from unite-db.com file (held_items.json)
+ * and the preprocessor code accessory (preprocitems.ini)
+ * Copyright (C) 2023 Jaret Jay Cantu
+ * Licensed under the AGPL
+ *
+ */
+
+// file utility functions
+function readAndHashJson(f) {
+	// read file
+	var content = read(f);
+	if (content == '')
+		throw("Could not read file: " + f);
+	var parsed = JSON.parse(content);
+	if (!parsed || parsed.length == 0)
+		throw("Could not parse file: " + f);
+	// convert sequential array into a hash organized by name element
+	var rehashed = {};
+	for (var p=0; p<parsed.length; p++) {
+		var e = parsed[p];
+		var name = e.name.replaceAll(/\W/g, '');
+		rehashed[name] = e;
+	}
+
+	return rehashed;
+}
+
+function readAndHashIni(f) {
+	// read file
+	var content = read(f);
+	if (content == '')
+		throw("Could not read file: " + f);
+	var lines = content.split("\n");
+	var rehashed = {};
+	var item = '';
+	for (var i=0; i<lines.length; i++) {
+		var l = lines[i];
+		l = l.replace(/#.*$/, '');
+		if (l == '') continue;
+		if (l.match(/^\[.*\]\s*$/)) {
+			item = l.substring(1, l.length-1);
+			rehashed[item] = {};
+		} else if (item == '') {
+			throw("No Item declared for code: " + l);
+		} else if (l.match(/^\s*\w+\s*=/)) {
+			var p = l.match(/^\s*(\w+)\s*=\s*(\S.*)\s*$/);
+			// name/value pair lines
+			rehashed[item][p[1]] = p[2];
+		}
+	}
+	return rehashed;
+}
+
+// constants
+var STAT_MAP = {
+	"Attack Speed": "aps",
+	"Attack": "attack",
+	"CD Reduction": "cdr",
+	"Critical-Hit Damage": "critdamage",
+	"Critical-Hit Rate": "critrate",
+	"Defense": "defense",
+	"Energy Rate": "charge",
+	"HP": "health",
+	"HP/5s": "recovery",
+	"Sp. Attack": "spattack",
+	"Sp. Defense": "spdefense",
+	"Speed": "movement",
+};
+
+var PERCENT_STATS = [
+	'cdr', 'critdamage', 'critrate', 'charge'
+];
+
+// parsing functions
+
+function parseUnlock(json, code, lvl) {
+	var val = json["level"+lvl];
+	if (typeof(val) === 'undefined') {
+		val = 0;
+	} else {
+		var percAt = val.indexOf('%');
+		if (percAt != -1)
+			val = val.substring(0,percAt)/100.0;
+	}
+	if (typeof(code.unlock) !== 'undefined')
+		return code.unlock.replaceAll(/%/g, val);
+	return val;
+}
+
+// main function
+function run(args) {
+	// check args
+	while (args.length && args[0].charAt(0) == '-') {
+		var arg = args.shift();
+		switch (arg) {
+		case '-h': case '--help':
+			print("./genitems [args?] [held_items.json " +
+				"[preprocitems.ini]]");
+			print(" -h/--help: Print this message");
+			quit(0);
+		default:
+			throw("Unknown argument: " + arg);
+		}
+	}
+
+	// get info
+	var items = readAndHashJson(scriptArgs && scriptArgs.length > 0
+				    ? scriptArgs[0] : "held_items.json");
+	var code = readAndHashIni(scriptArgs && scriptArgs.length > 1
+				    ? scriptArgs[1] : "preprocitems.ini");
+
+	// Define dummy item that prevents the need to check for a null item
+	items[''] = {};
+
+	// print header
+	print("// nessashot held item listing -- Generated file");
+	print("// https://github.com/jaretcantu/nessashot");
+	print("// " + (new Date()));
+	print("Item.LIST = {");
+
+	for (var k in items) {
+		var itm = items[k];
+		var c = code[k] || {};
+		print("\t" + (k==''?'""':k) + ": new Item(\"" + k + "\", [");
+		for (var l=0; l<30; l++) {
+			if (typeof(itm.stats) === 'undefined') {
+				print("\t\tnew Stats(),");
+				continue;
+			}
+			var statstr = '';
+			for (var s=0; s<itm.stats.length; s++) {
+				var stat = itm.stats[s];
+				if (statstr != '') statstr+= ', ';
+				var val;
+				if (l == 0) {
+					val = stat.initial;
+				} else {
+					if (typeof(stat.initial_diff)
+								!== 'undefined')
+						val = stat.initial_diff;
+					else
+						val = 0;
+					var mod = Math.ceil((1+l-stat.start)
+							/ (1+stat.skip));
+					val+= stat.increment * mod;
+				}
+				var statkey = STAT_MAP[stat.label];
+				if (PERCENT_STATS.indexOf(statkey) != -1)
+					val = (val/100.0).toFixed(3);
+				else if (stat.float)
+					val = val.toFixed(1);
+				else
+					val = Math.round(val);
+					
+				statstr+= statkey + ': ' + val;
+			}
+			print("\t\tnew Stats({" + statstr + "}),");
+		}
+		var l1 = parseUnlock(itm, c, 1);
+		var l10 = parseUnlock(itm, c, 10);
+		var l20 = parseUnlock(itm, c, 20);
+		print("\t], [" + l1 + ", " + l10 + ", " + l20 + "], " + 
+		      (typeof(c.passive) !== 'undefined'
+		       ? c.passive : "Passive.DUMMY") +
+		      "),");
+	}
+
+	// print footer
+	print("};");
+};
+
+run(scriptArgs);
