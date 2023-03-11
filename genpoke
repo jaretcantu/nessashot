@@ -159,7 +159,7 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 			continue;
 		} else if (lbl=='Damage - Boosted') {
 			// convenience replacement
-			lbl = 'BoostedDamage';
+			lbl = 'Boosted';
 		} else if (lbl.match(/^Damage/)) {
 			lbl = nam + lbl.substring(6);
 		} else {
@@ -192,10 +192,7 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 		print(pad + q + lbl + q + ": new DamagingEffect(" +
 		      (p.damage_type == 'Physical' ? rt + ",0" : "0," + rt) +
 		      ", " + $(m,pfx+'slider') + ", " + $(m,pfx+'base') +
-		      ")" + (lbl == 'BoostedDamage'?'.setCrit()':'') +",");
-		if (lbl == 'BoostedDamage')
-			print(pad + 'Boosted: new AttackMove("Boosted", ' +
-			      '"BoostedDamage").setCrit(),');
+		      ")" + (lbl == 'Boosted'?'.setCrit()':'') +",");
 		hpComp.push(lbl);
 	}
 
@@ -337,8 +334,7 @@ function run(args) {
 		// Move library: run replacements on numbers
 		if (typeof(c.learnset) === 'undefined' || c.learnset.length<1) {
 			var pad = (PREPROC_TARGET ? '' : "\t\t\t");
-			print(pad + "BasicDamage: Move.BASIC_DMG,");
-			print(pad + "Basic: Move.BASIC,");
+			print(pad + "Basic: Effect.BASIC,");
 			// Initialize a new Pokemon with all possible damage
 			// values that can be found in the JSON.
 			for (var i=0; i<ALL_MOVES.length; i++) {
@@ -348,6 +344,8 @@ function run(args) {
 			prindent("\t\t\t", funcSub(rfunc, c.learnset[0]));
 		}
 		print("\t\t}, " +
+		      fallback(c.basic, "Move.BASIC") + ", " +
+		      fallback(c.boosted, "Move.BOOSTED") + ", " +
 		      fallback(c.boostedproc, "BoostedProc.EVERY_3RD") +
 		      funcSub(rfunc, ", $learnat1, $upgradeat1, ["));
 		// three moves: initial, two choices

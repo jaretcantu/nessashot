@@ -486,10 +486,24 @@ AttackMove.prototype.getCoolDown = function(pkmn) {
 	return pkmn.ticksPerBasic() / TICKS_PER_SECOND;
 }
 
-Move.BASIC_DMG = new DamagingEffect(1,0,0,0).setCrit();
-Move.BASIC = new AttackMove("Basic", "BasicDamage").setCrit();
-Move.CRITLESS_BASIC_DMG = new DamagingEffect(1,0,0,0);
-Move.CRITLESS_BASIC = new AttackMove("Basic", "BasicDamageCritless");
+function FixedAttackMove(name, cd, effects) {
+	if (arguments.length == 0) return;
+	Move.apply(this, arguments);
+}
+FixedAttackMove.prototype = new Move(); // has no relation to AttackMove
+FixedAttackMove.prototype.constructor = FixedAttackMove;
+FixedAttackMove.prototype.getCoolDown = function(pkmn) {
+	return this.cooldown; // completely ignore cdr and aps
+}
+
+// Convenience global constants
+Effect.BASIC = new DamagingEffect(1,0,0,0).setCrit();
+Effect.CRITLESS_BASIC = new DamagingEffect(1,0,0,0);
+
+Move.BASIC = new AttackMove("Basic", "Basic").setCrit();
+Move.BOOSTED = new AttackMove("Boosted", "Boosted").setCrit();
+Move.CRITLESS_BASIC = new AttackMove("Basic", "Basic");
+Move.CRITLESS_BOOSTED = new AttackMove("Boosted", "Boosted");
 
 function Item(name, prog, unlocks, passive) {
 	if (arguments.length == 0) return;
@@ -659,7 +673,7 @@ function LearnSet(level, upgrade, moves) {
 	this.moves = moves;
 }
 
-function Pokemon(name, type, range, role, prog, moveset, bacond,
+function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 		 learnat1, upgrade1, learnset1, learnat2, upgrade2, learnset2,
 		 uniteat, unite, passive) {
 	if (arguments.length == 0) return;
@@ -672,6 +686,8 @@ function Pokemon(name, type, range, role, prog, moveset, bacond,
 	this.range = range;
 	this.role = role
 	this.progression = prog;
+	this.basic = basic;
+	this.boosted = boosted;
 	this.boostedProc = bacond;
 	this.moveset = moveset;
 	this.learnset = [

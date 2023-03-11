@@ -91,23 +91,25 @@ Calc.LIST = {
 	"basic": new Calc("basic", [],
 		function(r, champ, enemy, p) {
 			Calc.critCalc(r, champ, 'basic',
-				champ.pokemon.moveset.Basic,
+				champ.pokemon.basic,
 				enemy, p);
 		}),
 	"boosted": new Calc("boosted", [],
 		function(r, champ, enemy, p) {
 			Calc.critCalc(r, champ, 'boosted',
-				champ.pokemon.moveset.Boosted,
+				champ.pokemon.boosted,
 				enemy, p);
 		}),
 	"tpb": new Calc("tpb", [],
 		function(r, champ, enemy, p) {
-			r.tpb = champ.ticksPerBasic();
+			r.tpb = champ.pokemon.basic.getCoolDown(champ)
+							* TICKS_PER_SECOND;
 		}),
 	"tpboosted": new Calc("tpboosted", [],
 		function(r, champ, enemy, p) {
 			champ.pokemon.boostedProc.set(champ);
-			r.tpboosted = champ.ticksPerBoosted();
+			r.tpboosted = champ.pokemon.boosted.getCoolDown(champ)
+							* TICKS_PER_SECOND;
 		}),
 	"move1": new Calc("move1", [],
 		function(r, champ, enemy, p) {
