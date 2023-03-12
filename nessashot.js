@@ -545,16 +545,22 @@ function AttackMove(name, effects) {
 		args[a] = arguments[a];
 	args.splice(1, 0, 0); // insert 0 for cooldown time
 	Move.apply(this, args);
+	this.lifesteal = 0;
 }
 AttackMove.prototype = new Move();
 AttackMove.prototype.constructor = AttackMove;
+AttackMove.prototype.setLifeSteal = function(ls) {
+	this.lifesteal = ls;
+	return this;
+}
 AttackMove.prototype.getCoolDown = function(pkmn) {
 	return pkmn.ticksPerBasic() / TICKS_PER_SECOND;
 }
 AttackMove.prototype.calc = function(pkmn, targ) {
 	var ps = Move.prototype.calc.apply(this, arguments);
 	if (this.hints & HINT_PHYS)
-		ps.selfHeal+= Math.floor(ps.damage * pkmn.stats.lifesteal);
+		ps.selfHeal+= Math.floor(ps.damage *
+					 (pkmn.stats.lifesteal+this.lifesteal));
 	return ps;
 }
 
