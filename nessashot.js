@@ -120,7 +120,7 @@ Passive.prototype.proc = function(type, poke, item, foe) {
 	if (this.checkCondition(type, poke, item, foe))
 		this.func(poke, item, foe);
 }
-Passive.prototype.calc = function(pkmn) {
+Passive.prototype.calc = function(pkmn, targ) {
 	return 0;
 }
 Passive.prototype.cooldown = function(pkmn) {
@@ -201,8 +201,8 @@ EffectItemPassive.prototype.getEffect = function(pkmn) {
 	// Normally, the item state is passed in through proc()
 	return this.getItemState(pkmn).unlock;
 }
-EffectItemPassive.prototype.calc = function(pkmn) {
-	return this.getEffect(pkmn).calc(pkmn);
+EffectItemPassive.prototype.calc = function(pkmn, targ) {
+	return this.getEffect(pkmn).calc(pkmn, targ);
 }
 
 function BasicEffectItemPassive(time) {
@@ -322,7 +322,7 @@ BoostedProc.FIVE_SECONDS = new TimedBoostedProc(5);
 
 function Effect() {
 }
-Effect.prototype.calc = function(pkmn) { return 0; }
+Effect.prototype.calc = function(pkmn, targ) { return 0; }
 Effect.prototype.canCrit = function() { return false; }
 Effect.prototype.getHints = function() { return 0; }
 Effect.toString = function() { return "Effect()"; }
@@ -366,7 +366,7 @@ HealthModEffect.prototype.setPerc = function(rh, mh) {
 	this.maxHealth = mh;
 	return this;
 }
-HealthModEffect.prototype.calc = function(pkmn) {
+HealthModEffect.prototype.calc = function(pkmn, targ) {
 	return	this.physMultiplier * pkmn.stats.attack +
 		this.specMultiplier * pkmn.stats.spattack +
 		this.levelScaling * (pkmn.level-1) +
@@ -409,7 +409,7 @@ function AllyHealingEffect(pmux, smux, lev, flat) {
 }
 AllyHealingEffect.prototype = new HealingEffect();
 AllyHealingEffect.prototype.constructor = AllyHealingEffect;
-AllyHealingEffect.prototype.calc = function(pkmn) {
+AllyHealingEffect.prototype.calc = function(pkmn, targ) {
 	var h = HealingEffect.prototype.calc.apply(this, arguments);
 	h = Math.floor(h * pkmn.stats.healing);
 	return h;
@@ -473,10 +473,10 @@ Move.prototype.setHints = function(pkmn) {
 	for (var e=0; e<this.effects.length; e++)
 		this.hints|= pkmn.moveset[this.effects[e]].getHints();
 }
-Move.prototype.calc = function(pkmn) {
+Move.prototype.calc = function(pkmn, targ) {
 	var total = 0;
 	for (var e=0; e<this.effects.length; e++)
-		total+= pkmn.pokemon.moveset[this.effects[e]].calc(pkmn);
+		total+= pkmn.pokemon.moveset[this.effects[e]].calc(pkmn, targ);
 	return total;
 }
 Move.prototype.canCrit = function() {
@@ -533,9 +533,9 @@ function Item(name, prog, unlocks, passive) {
 	    this.passive.constructor == ScoreScalingPassive)
 		this.hints|= HINT_SCORE;
 }
-Item.prototype.calc = function(pkmn) {
+Item.prototype.calc = function(pkmn, targ) {
 	if (this.passive)
-		return this.passive.calc(pkmn);
+		return this.passive.calc(pkmn, targ);
 	return 0;
 }
 Item.prototype.cooldown = function(pkmn) {
