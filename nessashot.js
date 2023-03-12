@@ -357,20 +357,36 @@ function HealthModEffect(pmux, smux, lev, flat) {
 	this.levelScaling = lev;
 	this.baseDamage = flat;
 	this.maxHealth = 0;
-	this.remHealth = 0;
+	this.missingHealth = 0;
+	this.remainingHealth = 0;
 }
 HealthModEffect.prototype = new Effect();
 HealthModEffect.prototype.constructor = HealthModEffect;
-HealthModEffect.prototype.setPerc = function(rh, mh) {
-	this.remHealth = rh;
-	this.maxHealth = mh;
+HealthModEffect.prototype.setMaxPerc = function(p) {
+	this.maxHealth = p;
+	return this;
+}
+HealthModEffect.prototype.setMissingPerc = function(p) {
+	this.missingHealth = p;
+	return this;
+}
+HealthModEffect.prototype.setRemainingPerc = function(p) {
+	this.remainingHealth = p;
 	return this;
 }
 HealthModEffect.prototype.calc = function(pkmn, targ) {
-	return	this.physMultiplier * pkmn.stats.attack +
+	var h =	this.physMultiplier * pkmn.stats.attack +
 		this.specMultiplier * pkmn.stats.spattack +
 		this.levelScaling * (pkmn.level-1) +
 		this.baseDamage;
+	if (targ != null)
+		h+= this.calcPerc(targ);
+	return h;
+}
+HealthModEffect.prototype.calcPerc = function(pkmn) {
+	return Math.floor(this.maxHealth * pkmn.maxHealth +
+			  this.missingHealth * (pkmn.maxHealth-pkmn.health) +
+			  this.remainingHealth * pkmn.health);
 }
 
 function DamagingEffect(pmux, smux, lev, flat) {
@@ -764,6 +780,8 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
 	this.scores = score;
 	this.emblems = emblems;
 	this.boostedCounter = 0;
+	this.health = 0;
+	this.maxHealth = 0;
 	this.moves = [];
 	if (this.level < 3) {
 		this.moves.push(this.pokemon.learnset[moveFirst].moves[0]);
@@ -799,7 +817,8 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
 }
 Champion.prototype.init = function() {
 	this.procPassives(Passive.INIT);
-	this.maxhealth = this.stats.health;
+	this.maxHealth = this.stats.health;
+	this.health = this.maxHealth;
 }
 Champion.prototype.procPassives = function(type, foe) {
 	if (arguments.length < 2)
