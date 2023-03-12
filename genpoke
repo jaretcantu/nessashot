@@ -218,7 +218,7 @@ function getMoveFromJson(pad, p,c, rfunc, move) {
 			//break;
 		default:
 			if (ls != '') ls+= ', ';
-			ls+= 'new Move("' + m.name.replaceAll(/[- ]/g, '')+
+			ls+= 'new Move("' + m.name.replaceAll(/[- ]/g, '') +
 				(hpc>0 ? '+' : '') +
 				'", ' + ppn + 'cd, [';
 			for (var h=0; h<hpComp.length; h++) {
@@ -344,8 +344,10 @@ function run(args) {
 			prindent("\t\t\t", funcSub(rfunc, c.learnset[0]));
 		}
 		print("\t\t}, " +
-		      fallback(c.basic, "Move.BASIC") + ", " +
-		      fallback(c.boosted, "Move.BOOSTED") + ", " +
+		      fallback(c.basic,
+			       'new AttackMove("Basic", "Basic")') + ", " +
+		      fallback(c.boosted,
+			       'new AttackMove("Boosted", "Boosted")') + ", " +
 		      fallback(c.boostedproc, "BoostedProc.EVERY_3RD") +
 		      funcSub(rfunc, ", $learnat1, $upgradeat1, ["));
 		// three moves: initial, two choices

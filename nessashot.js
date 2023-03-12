@@ -324,6 +324,7 @@ function Effect() {
 }
 Effect.prototype.calc = function(pkmn) { return 0; }
 Effect.prototype.canCrit = function() { return false; }
+Effect.prototype.getHints = function() { return 0; }
 Effect.toString = function() { return "Effect()"; }
 
 function StatusEffect(dur, flatStats, lvlStats) {
@@ -383,6 +384,16 @@ DamagingEffect.prototype.setCrit = function() {
 	this.crittable = 1;
 	return this;
 }
+DamagingEffect.prototype.getHints = function() {
+	var h = 0;
+	if (this.crittable)
+		h|= HINT_CRIT;
+	if (this.physMultiplier)
+		h|= HINT_PHYS;
+	if (this.specMultiplier)
+		h|= HINT_SPEC;
+	return h;
+}
 DamagingEffect.prototype.canCrit = function() { return this.crittable; }
 
 function HealingEffect(pmux, smux, lev, flat) {
@@ -413,7 +424,7 @@ function Move(name, cd, effects) {
 	this.resetsBoosted = false;
 	this.lockout = 0;
 	this.cdx = 0;
-	this.crittable = 0;
+	this.hints = 0;
 	if (!isArray(effects)) {
 		if (isNaN(effects)) {
 			this.effects = [effects];
@@ -458,9 +469,9 @@ Move.prototype.setBoost = function() {
 	this.resetsBoosted = true;
 	return this;
 }
-Move.prototype.setCrit = function() {
-	this.crittable = 1;
-	return this;
+Move.prototype.setHints = function(pkmn) {
+	for (var e=0; e<this.effects.length; e++)
+		this.hints|= pkmn.moveset[this.effects[e]].getHints();
 }
 Move.prototype.calc = function(pkmn) {
 	var total = 0;
@@ -469,7 +480,7 @@ Move.prototype.calc = function(pkmn) {
 	return total;
 }
 Move.prototype.canCrit = function() {
-	return this.crittable;
+	return this.hints & HINT_CRIT;
 }
 
 function AttackMove(name, effects) {
@@ -499,11 +510,6 @@ FixedAttackMove.prototype.getCoolDown = function(pkmn) {
 // Convenience global constants
 Effect.BASIC = new DamagingEffect(1,0,0,0).setCrit();
 Effect.CRITLESS_BASIC = new DamagingEffect(1,0,0,0);
-
-Move.BASIC = new AttackMove("Basic", "Basic").setCrit();
-Move.BOOSTED = new AttackMove("Boosted", "Boosted").setCrit();
-Move.CRITLESS_BASIC = new AttackMove("Basic", "Basic");
-Move.CRITLESS_BOOSTED = new AttackMove("Boosted", "Boosted");
 
 function Item(name, prog, unlocks, passive) {
 	if (arguments.length == 0) return;
@@ -701,16 +707,18 @@ function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 		this.hints|= HINT_CRIT;
 	if (this.type == Pokemon.PHYSICAL)
 		this.hints|= HINT_PHYS;
+	else
+		this.hints|= HINT_SPEC;
 	// normalize learnsets
 	for (var l=0; l<this.learnset.length; l++) {
 		var ls = this.learnset[l];
 		for (var m=0; m<ls.moves.length; m++) {
 			// A null entry means the same as the previous entry
-			if (m>0 && ls.moves[m] === null)
+			if (ls.moves[m] === null) {
+				if (m == 0) continue; // for unite learning
 				ls.moves[m] = ls.moves[m-1];
-			// Expand string key references to object references
-			if (typeof(ls.moves[m]) === "string")
-				ls.moves[m] = this.moveset[ls.moves[m]];
+			}
+			ls.moves[m].setHints(this);
 		}
 	}
 }
