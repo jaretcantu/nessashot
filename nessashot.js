@@ -121,7 +121,7 @@ Passive.prototype.proc = function(type, poke, item, foe) {
 		this.func(poke, item, foe);
 }
 Passive.prototype.calc = function(pkmn, targ) {
-	return 0;
+	return new PointStore();
 }
 Passive.prototype.cooldown = function(pkmn) {
 	return 1; // prevent divide-by-zero error for DPS calculation
@@ -320,9 +320,28 @@ BoostedProc.EVERY_3RD = new UsageBoostedProc(3);
 BoostedProc.EVERY_4TH = new UsageBoostedProc(4);
 BoostedProc.FIVE_SECONDS = new TimedBoostedProc(5);
 
+function PointStore(d, sh, ah, ss, as) {
+	this.damage = (arguments.length > 0 ? d : 0);
+	this.selfHeal = (arguments.length > 1 ? sh : 0);
+	this.allyHeal = (arguments.length > 2 ? ah : 0);
+	this.selfShield = (arguments.length > 3 ? ss : 0);
+	this.allyShield = (arguments.length > 4 ? as : 0);
+}
+PointStore.prototype.add = function(ps) {
+	this.damage+= ps.damage;
+	this.selfHeal+= ps.selfHeal;
+	this.allyHeal+= ps.allyHeal;
+	this.selfShield+= ps.selfShield;
+	this.allyShield+= ps.allyShield;
+}
+PointStore.prototype.getTotal = function() {
+	return this.damage + this.selfHeal + this.allyHeal +
+	       this.selfShield + this.allyShield;
+}
+
 function Effect() {
 }
-Effect.prototype.calc = function(pkmn, targ) { return 0; }
+Effect.prototype.calc = function(pkmn, targ) { return new PointStore(); }
 Effect.prototype.canCrit = function() { return false; }
 Effect.prototype.getHints = function() { return 0; }
 Effect.toString = function() { return "Effect()"; }
@@ -374,7 +393,7 @@ HealthModEffect.prototype.setRemainingPerc = function(p) {
 	this.remainingHealth = p;
 	return this;
 }
-HealthModEffect.prototype.calc = function(pkmn, targ) {
+HealthModEffect.prototype.calcPoints = function(pkmn, targ) {
 	var h =	this.physMultiplier * pkmn.stats.attack +
 		this.specMultiplier * pkmn.stats.spattack +
 		this.levelScaling * (pkmn.level-1) +
@@ -411,6 +430,12 @@ DamagingEffect.prototype.getHints = function() {
 	return h;
 }
 DamagingEffect.prototype.canCrit = function() { return this.crittable; }
+DamagingEffect.prototype.calc = function(pkmn, targ) {
+	var ps = new PointStore(this.calcPoints(pkmn, targ));
+	if (this.specMultiplier)
+		ps.selfHeal+= Math.floor(pkmn.stats.spellvamp * ps.damage);
+	return ps;
+}
 
 function HealingEffect(pmux, smux, lev, flat) {
 	if (arguments.length == 0) return;
@@ -426,9 +451,10 @@ function AllyHealingEffect(pmux, smux, lev, flat) {
 AllyHealingEffect.prototype = new HealingEffect();
 AllyHealingEffect.prototype.constructor = AllyHealingEffect;
 AllyHealingEffect.prototype.calc = function(pkmn, targ) {
-	var h = HealingEffect.prototype.calc.apply(this, arguments);
-	h = Math.floor(h * pkmn.stats.healing);
-	return h;
+	var h = Math.floor(this.calcPoints(pkmn, targ) * pkmn.stats.healing);
+	var ps = new PointStore();
+	ps.allyHeal = h;
+	return ps;
 }
 
 function SelfHealingEffect(pmux, smux, lev, flat) {
@@ -438,7 +464,10 @@ function SelfHealingEffect(pmux, smux, lev, flat) {
 SelfHealingEffect.prototype = new HealingEffect();
 SelfHealingEffect.prototype.constructor = SelfHealingEffect;
 SelfHealingEffect.prototype.calc = function(pkmn, targ) {
-	return HealingEffect.prototype.calc.call(this, pkmn, pkmn);
+	var h = this.calcPoints(pkmn, pkmn);
+	var ps = new PointStore();
+	ps.selfHeal = h;
+	return ps;
 }
 
 function Move(name, cd, effects) {
@@ -500,10 +529,10 @@ Move.prototype.setHints = function(pkmn) {
 		this.hints|= pkmn.moveset[this.effects[e]].getHints();
 }
 Move.prototype.calc = function(pkmn, targ) {
-	var total = 0;
+	var ps = new PointStore();
 	for (var e=0; e<this.effects.length; e++)
-		total+= pkmn.pokemon.moveset[this.effects[e]].calc(pkmn, targ);
-	return total;
+		ps.add(pkmn.pokemon.moveset[this.effects[e]].calc(pkmn, targ));
+	return ps;
 }
 Move.prototype.canCrit = function() {
 	return this.hints & HINT_CRIT;
@@ -521,6 +550,12 @@ AttackMove.prototype = new Move();
 AttackMove.prototype.constructor = AttackMove;
 AttackMove.prototype.getCoolDown = function(pkmn) {
 	return pkmn.ticksPerBasic() / TICKS_PER_SECOND;
+}
+AttackMove.prototype.calc = function(pkmn, targ) {
+	var ps = Move.prototype.calc.apply(this, arguments);
+	if (this.hints & HINT_PHYS)
+		ps.selfHeal+= Math.floor(ps.damage * pkmn.stats.lifesteal);
+	return ps;
 }
 
 function FixedAttackMove(name, cd, effects) {
@@ -562,7 +597,7 @@ function Item(name, prog, unlocks, passive) {
 Item.prototype.calc = function(pkmn, targ) {
 	if (this.passive)
 		return this.passive.calc(pkmn, targ);
-	return 0;
+	return new PointStore();
 }
 Item.prototype.cooldown = function(pkmn) {
 	if (this.passive)

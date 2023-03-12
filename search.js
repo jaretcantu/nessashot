@@ -35,24 +35,33 @@ Calc.prototype.recurse = function(r, champ, enemy, param) {
 }
 Calc.critCalc = function(r, champ, lbl, mv, enemy, param) {
 	// common way of adding all crit rates
-	var dmg = mv.calc(champ);
+	var ps = mv.calc(champ);
+	var dmg = ps.damage;
+	var total = ps.getTotal();
+	r[lbl + 'allyheal'] = ps.allyHeal;
+	r[lbl + 'heal'] = ps.allyHeal + ps.selfHeal;
 	if (!isDefined(param.crit) || !mv.canCrit()) {
-		r[lbl] = dmg;
+		r[lbl + 'dmg'] = dmg;
+		r[lbl] = total;
 		return;
 	}
 	for (var c=0; c<param.crit.length; c++) {
 		var sfx = param.crit.length > 1 ? param.crit[c] : '';
 		switch (param.crit[c]) {
 		case 'nc': // no crit
-			r[lbl + sfx] = dmg;
+			r[lbl + 'dmg' + sfx] = dmg;
+			r[lbl + sfx] = total;
 			break;
 		case 'fc': // full crit
-			r[lbl + sfx] = dmg * (1 + champ.stats.critdamage);
+			var increase = dmg * champ.stats.critdamage;
+			r[lbl + 'dmg' + sfx] = dmg + increase;
+			r[lbl + sfx] = total + increase;
 			break;
 		default:
-			r[lbl + sfx] = dmg * ((1 - champ.stats.critrate) +
-					(champ.stats.critrate *
-					 (1 + champ.stats.critdamage)));
+			var increase = dmg * champ.stats.critrate * 
+					champ.stats.critdamage;
+			r[lbl + 'dmg' + sfx] = dmg + increase;
+			r[lbl + sfx] = total + increase;
 			
 		}
 	}
@@ -79,14 +88,13 @@ Calc.LIST = {
 		}),
 	"dumbdmg": new Calc("dumbdmg", [],
 		function(r, champ, enemy, p) {
-			var total = 0;
+			var ps = new PointStore();
 			var ms = champ.pokemon.moveset;
 			for (var m in ms) {
-				if (isDefined(ms[m].calc))
-					total+= ms[m].calc(champ);
+				ps.add(ms[m].calc(champ));
 			}
 			// TODO Calc boosted attacks better
-			r.dumbdmg = total;
+			r.dumbdmg = ps.getTotal();
 		}),
 	"basic": new Calc("basic", [],
 		function(r, champ, enemy, p) {
@@ -129,18 +137,19 @@ Calc.LIST = {
 		}),
 	"itemdmg": new Calc("itemdmg", [],
 		function(r, champ, enemy, p) {
-			var total = 0;
+			var ps = new PointStore();
 			for (var i=0; i<champ.items.length; i++) {
-				total+= champ.items[i].item.calc(champ);
+				ps.add(champ.items[i].item.calc(champ));
 			}
-			r.itemdmg = total;
+			r.itemdmg = ps.getTotal();
 		}),
 	"itemdps": new Calc("itemdps", [],
 		function(r, champ, enemy, p) {
 			var total = 0;
 			for (var i=0; i<champ.items.length; i++) {
 				var item = champ.items[i].item;
-				total+= item.calc(champ) / item.cooldown(champ);
+				total+= item.calc(champ).getTotal()
+					/ item.cooldown(champ);
 			}
 			r.itemdps = total;
 		}),
