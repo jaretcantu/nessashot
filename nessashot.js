@@ -415,6 +415,16 @@ AllyHealingEffect.prototype.calc = function(pkmn, targ) {
 	return h;
 }
 
+function SelfHealingEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	HealingEffect.apply(this, arguments);
+}
+SelfHealingEffect.prototype = new HealingEffect();
+SelfHealingEffect.prototype.constructor = SelfHealingEffect;
+SelfHealingEffect.prototype.calc = function(pkmn, targ) {
+	return HealingEffect.prototype.calc.call(this, pkmn, pkmn);
+}
+
 function Move(name, cd, effects) {
 	if (arguments.length == 0) return;
 	this.name = name;
