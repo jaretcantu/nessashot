@@ -748,6 +748,9 @@ function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 		}
 	}
 }
+Pokemon.prototype.toString = function() {
+	return "Pokemon(" + this.name + ")";
+}
 Pokemon.MELEE = 0;
 Pokemon.RANGED = 1;
 Pokemon.PHYSICAL = 0;
