@@ -50,17 +50,14 @@ function Stats(args) {
 		Stats.call(this, arguments);
 	} else if (isDefined(args.length)) {
 		Stats.call(this); // make sure everything is at least zero'd
+		/* XXX Define non-zero defaults for Pokemon, which aren't known
+		 *     or known to be different as of yet. */
+		this.critdamage = 1; // additional damage when crit
+		this.charge = 1; // there is some per-pokemon rate
+		this.healing = 1;
 		// Array or argument list
 		for (var s=0; s<args.length; s++)
 			this[Stats.LIST[s]] = args[s];
-		// XXX Define defaults for Pokemon, which aren't known or
-		//     known to be different as of yet.
-		this.critdamage = 1; // additional damage when crit
-		this.charge = 1; // there is some per-pokemon rate
-		this.movement = 0;   /* just to show changes with items, which
-				      * are quite large for FloatStone, so go
-				      * with the Defense formula "average" */
-		this.healing = 1;
 	} else { // Assume object/associative array
 		Stats.call(this);
 		// Transfer all elements from arguments to stats object
