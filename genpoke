@@ -1,7 +1,7 @@
 #!/usr/bin/js
 /* genpoke
  * Generate the pokemon.js include from unite-db.com files (stats.json and
- * pokemon.json) and the preprocessor code accessory (preproc.ini)
+ * pokemon.json) and the preprocessor code accessory (preprocpoke.ini)
  * Copyright (C) 2023 Jaret Jay Cantu
  * Licensed under the AGPL
  *
@@ -249,7 +249,7 @@ function run(args) {
 			break;
 		case '-h': case '--help':
 			print("./genpoke [args?] [stats.json [pokemon.json " +
-				"[preproc.ini]]]");
+				"[preprocpoke.ini]]]");
 			print(" -h/--help: Print this message");
 			print(" -p/--preproc [pokemon]: Get preprocessor");
 			quit(0);
@@ -264,7 +264,7 @@ function run(args) {
 	var pokes = readAndHashJson(scriptArgs && scriptArgs.length > 1
 				    ? scriptArgs[1] : "pokemon.json");
 	var code = readAndHashIni(scriptArgs && scriptArgs.length > 2
-				    ? scriptArgs[2] : "preproc.ini");
+				    ? scriptArgs[2] : "preprocpoke.ini");
 
 
 	// print header
