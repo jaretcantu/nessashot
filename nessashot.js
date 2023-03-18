@@ -568,25 +568,18 @@ Move.prototype.canCrit = function() {
 	return this.hints & HINT_CRIT;
 }
 
-function AttackMove(name, effects) {
+function BaseAttackMove(name, cd, effects) {
 	if (arguments.length == 0) return;
-	var args = []; // quick argument copy
-	for (var a=0; a<arguments.length; a++)
-		args[a] = arguments[a];
-	args.splice(1, 0, 0); // insert 0 for cooldown time
-	Move.apply(this, args);
+	Move.apply(this, arguments);
 	this.lifesteal = 0;
 }
-AttackMove.prototype = new Move();
-AttackMove.prototype.constructor = AttackMove;
-AttackMove.prototype.setLifeSteal = function(ls) {
+BaseAttackMove.prototype = new Move();
+BaseAttackMove.prototype.constructor = BaseAttackMove;
+BaseAttackMove.prototype.setLifeSteal = function(ls) {
 	this.lifesteal = ls;
 	return this;
 }
-AttackMove.prototype.getCoolDown = function(pkmn) {
-	return pkmn.ticksPerBasic() / TICKS_PER_SECOND;
-}
-AttackMove.prototype.calc = function(pkmn, targ) {
+BaseAttackMove.prototype.calc = function(pkmn, targ) {
 	var ps = Move.prototype.calc.apply(this, arguments);
 	if (this.hints & HINT_PHYS)
 		ps.selfHeal+= Math.floor(ps.damage *
@@ -594,11 +587,25 @@ AttackMove.prototype.calc = function(pkmn, targ) {
 	return ps;
 }
 
+function AttackMove(name, effects) {
+	if (arguments.length == 0) return;
+	var args = []; // quick argument copy
+	for (var a=0; a<arguments.length; a++)
+		args[a] = arguments[a];
+	args.splice(1, 0, 0); // insert 0 for cooldown time
+	BaseAttackMove.apply(this, args);
+}
+AttackMove.prototype = new BaseAttackMove(); // easier for this to be subclass
+AttackMove.prototype.constructor = AttackMove;
+AttackMove.prototype.getCoolDown = function(pkmn) {
+	return pkmn.ticksPerBasic() / TICKS_PER_SECOND;
+}
+
 function FixedAttackMove(name, cd, effects) {
 	if (arguments.length == 0) return;
-	Move.apply(this, arguments);
+	BaseAttackMove.apply(this, arguments);
 }
-FixedAttackMove.prototype = new Move(); // has no relation to AttackMove
+FixedAttackMove.prototype = new BaseAttackMove();
 FixedAttackMove.prototype.constructor = FixedAttackMove;
 FixedAttackMove.prototype.getCoolDown = function(pkmn) {
 	return this.cooldown; // completely ignore cdr and aps
