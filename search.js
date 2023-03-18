@@ -40,6 +40,7 @@ Calc.critCalc = function(r, champ, lbl, mv, enemy, param) {
 	var total = ps.getTotal();
 	r[lbl + 'allyheal'] = ps.allyHeal;
 	r[lbl + 'heal'] = ps.allyHeal + ps.selfHeal;
+	r[lbl + 'shield'] = ps.allyShield + ps.selfShield;
 	if (!isDefined(param.crit) || !mv.canCrit()) {
 		r[lbl + 'dmg'] = dmg;
 		r[lbl] = total;

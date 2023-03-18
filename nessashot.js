@@ -467,6 +467,39 @@ SelfHealingEffect.prototype.calc = function(pkmn, targ) {
 	return ps;
 }
 
+function ShieldEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	HealthModEffect.apply(this, arguments);
+}
+ShieldEffect.prototype = new HealthModEffect();
+ShieldEffect.prototype.constructor = ShieldEffect;
+
+function AllyShieldEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	ShieldEffect.apply(this, arguments);
+}
+AllyShieldEffect.prototype = new ShieldEffect();
+AllyShieldEffect.prototype.constructor = AllyShieldEffect;
+AllyShieldEffect.prototype.calc = function(pkmn, targ) {
+	var h = Math.floor(this.calcPoints(pkmn, targ) * pkmn.stats.healing);
+	var ps = new PointStore();
+	ps.allyShield = h;
+	return ps;
+}
+
+function SelfShieldEffect(pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	ShieldEffect.apply(this, arguments);
+}
+SelfShieldEffect.prototype = new ShieldEffect();
+SelfShieldEffect.prototype.constructor = SelfShieldEffect;
+SelfShieldEffect.prototype.calc = function(pkmn, targ) {
+	var h = this.calcPoints(pkmn, pkmn);
+	var ps = new PointStore();
+	ps.selfShield = h;
+	return ps;
+}
+
 function Move(name, cd, effects) {
 	if (arguments.length == 0) return;
 	this.name = name;
