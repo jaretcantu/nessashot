@@ -349,18 +349,20 @@ function run(args) {
 		      fallback(c.boosted,
 			       'new AttackMove("Boosted", "Boosted")') + ", " +
 		      fallback(c.boostedproc, "BoostedProc.EVERY_3RD") +
-		      funcSub(rfunc, ", $learnat1, $upgradeat1, ["));
+		      funcSub(rfunc,
+			      ", new LearnSet($learnat1, $upgradeat1, ["));
 		// three moves: initial, two choices
 		if (typeof(c.learnset) === 'undefined' || c.learnset.length<2) {
 		} else {
 			prindent("\t\t\t", funcSub(rfunc, c.learnset[1]));
 		}
-		print(funcSub(rfunc, "\t\t], $learnat2, $upgradeat2, ["));
+		print(funcSub(rfunc, "\t\t]), " +
+			      "new LearnSet($learnat2, $upgradeat2, ["));
 		// other three moves: initial, two choices
 		if (typeof(c.learnset) !== 'undefined' && c.learnset.length>=3)
 			prindent("\t\t\t", funcSub(rfunc,c.learnset[2]));
 		// Unite move
-		print(funcSub(rfunc, "\t\t], $uniteat,"));
+		print(funcSub(rfunc, "\t\t]), $uniteat,"));
 		prindent("\t\t",
 			 fallback(c.learnset && funcSub(rfunc, c.learnset[3]),
 				 'null') + ",");

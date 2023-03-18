@@ -784,8 +784,7 @@ function LearnSet(level, upgrade, moves) {
 }
 
 function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
-		 learnat1, upgrade1, learnset1, learnat2, upgrade2, learnset2,
-		 uniteat, unite, passive) {
+		 learnset1, learnset2, uniteat, unite, passive) {
 	if (arguments.length == 0) return;
 	if (prog.length != 15) {
 		throw("Pokemon " + name + " has " + prog.length +
@@ -801,8 +800,7 @@ function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 	this.boostedProc = bacond;
 	this.moveset = moveset;
 	this.learnset = [
-			new LearnSet(learnat1, upgrade1, learnset1),
-			new LearnSet(learnat2, upgrade2, learnset2),
+			learnset1, learnset2,
 			new LearnSet(uniteat, 0, [null, unite]),
 		];
 	this.passive = passive;
