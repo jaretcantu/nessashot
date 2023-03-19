@@ -41,6 +41,7 @@ function readAndHashIni(f) {
 	var seq;
 	for (var i=0; i<lines.length; i++) {
 		var l = lines[i];
+		if (l.match(/^\s*#/)) continue; // skip everything if # at start
 		l = l.replace(/#.*$/, '');
 		if (l.match(/^\[.*\]\s*$/)) {
 			poke = l.substring(1, l.length-1);
