@@ -339,6 +339,7 @@ PointStore.prototype.getTotal = function() {
 function Effect() {
 }
 Effect.prototype.calc = function(pkmn, targ) { return new PointStore(); }
+Effect.prototype.run = function(pkmn, targ) { }
 Effect.prototype.canCrit = function() { return false; }
 Effect.prototype.getHints = function() { return 0; }
 Effect.toString = function() { return "Effect()"; }
@@ -403,6 +404,15 @@ HealthModEffect.prototype.calcPerc = function(pkmn) {
 	return Math.floor(this.maxHealth * pkmn.maxHealth +
 			  this.missingHealth * (pkmn.maxHealth-pkmn.health) +
 			  this.remainingHealth * pkmn.health);
+}
+HealthModEffect.prototype.run = function(pkmn, targ) {
+	// Do this here instead of in subclasses because of items and abilities
+	// that may cause multiple effect triggers
+	var ps = this.calc(pkmn, targ);
+	pkmn.modifyHealth(ps.selfHeal);
+	pkmn.shielding+= ps.selfShield;
+	targ.modifyHealth(ps.allyHeal - ps.damage);
+	targ.shielding+= ps.allyShield;
 }
 
 function DamagingEffect(pmux, smux, lev, flat) {
@@ -861,6 +871,7 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
 	this.boostedCounter = 0;
 	this.health = 0;
 	this.maxHealth = 0;
+	this.shielding = 0;
 	this.moves = [];
 	if (this.level < 3) {
 		this.moves.push(this.pokemon.learnset[moveFirst].moves[0]);
@@ -908,6 +919,21 @@ Champion.prototype.procPassives = function(type, foe) {
 		if (!itm.item) continue;
 		itm.item.passive.proc(type, this, itm, foe);
 	}
+}
+Champion.prototype.modifyHealth = function(chng) {
+	if (chng < 0 && this.shielding) {
+		// TODO Add shield piercing
+		this.shielding+= chng;
+		if (this.shielding >= 0) return;
+		// shielding is negative now, so add to damage (negative chng)
+		chng-= this.shielding;
+		this.shielding = 0; // use up the entire shield
+	}
+	this.health+= chng;
+	if (this.health < 0)
+		this.health = 0;
+	else if (this.health > this.maxHealth)
+		this.health = this.maxHealth;
 }
 Champion.prototype.basicsPerBoosted = function() {
 	return this.pokemon.boostedProc.basicsPerBoosted(this);
