@@ -309,6 +309,12 @@ function parseOption(parsed, arg, args, a) {
 		}
 		parsed.moves.push(arg);
 		break;
+	case 'counter':
+		arg = args[++a];
+		if (isNaN(arg))
+			throw("Invalid custom counter amount: " + arg);
+		parsed.customcounter = arg;
+		break;
 	case 'crit':
 		arg = args[++a].split(',');
 		for (var c=0; c<arg.length; c++) {
@@ -652,6 +658,7 @@ function calcTable(poke, levels, items, parsed, score, emblems, moves,
 					0, moves[0], moves[1],
 					score, emblems);
 		champ.init();
+		champ.customCounter = parsed.customcounter;
 
 		for (var s=0; s<parsed.show.length; s++) {
 			var sh = parsed.show[s];
@@ -706,6 +713,8 @@ function createTables(parsed) {
 		parsed.items = [];
 	if (!parsed.moves)
 		parsed.moves = [1,1];
+	if (!isDefined(parsed.customcounter))
+		parsed.customcounter = 0;
 	if (!isDefined(parsed.itemdefault))
 		parsed.itemdefault = 30;
 	if (!isDefined(parsed.itemlevels))
