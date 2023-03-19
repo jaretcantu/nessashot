@@ -481,6 +481,22 @@ DamagingEffect.prototype.calc = function(pkmn, targ) {
 	return ps;
 }
 
+function LifeStealEffect(flatPerc, levPerc, pmux, smux, lev, flat) {
+	if (arguments.length == 0) return;
+	DamagingEffect.call(this, pmux, smux, lev, flat);
+	this.lifeStealFlatPercent = flatPerc;
+	this.lifeStealLevelPercent = levPerc;
+}
+LifeStealEffect.prototype = new DamagingEffect();
+LifeStealEffect.prototype.constructor = LifeStealEffect;
+LifeStealEffect.prototype.calc = function(pkmn, targ) {
+	var ps = DamagingEffect.prototype.calc.apply(this, arguments);
+	ps.selfHeal+= Math.floor(ps.damage *
+				 (this.lifeStealFlatPercent +
+				  this.lifeStealLevelPercent*(pkmn.level-1)));
+	return ps;
+}
+
 function HealingEffect(pmux, smux, lev, flat) {
 	if (arguments.length == 0) return;
 	HealthModEffect.apply(this, arguments);
