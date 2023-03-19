@@ -433,9 +433,9 @@ HealthModEffect.prototype.calcPoints = function(pkmn, targ) {
 		if (typeof(this.useCounter) == 'function')
 			h = this.useCounter(h, pkmn.customCounter);
 		else
-			h = Math.floor(h * this.useCounter*pkmn.customCounter);
+			h = h * this.useCounter * pkmn.customCounter;
 	}
-	return h;
+	return Math.floor(h);
 }
 HealthModEffect.prototype.calcPerc = function(pkmn) {
 	return Math.floor(this.maxHealth * pkmn.maxHealth +
