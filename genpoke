@@ -46,18 +46,18 @@ function readAndHashIni(f) {
 		if (l.match(/^\[.*\]\s*$/)) {
 			poke = l.substring(1, l.length-1);
 			rehashed[poke] = {learnset: ['','','','']};
-			seq = 0;
+			seq = -1; // uninitialized
 		} else if (l.match(/^\s*$/)) {
 			if (poke != '')
 				seq = (seq < 0 ? 0 : seq+1);
 		} else if (poke == '') {
 			throw("No Pokemon declared for code: " + l);
-		} else if (l.match(/^\s*\w+\s*=/) && seq <= 0) {
+		} else if (l.match(/^\s*\w+\s*=/) && seq < 0) {
 			var p = l.match(/^\s*(\w+)\s*=\s*(\S.*)\s*$/);
 			// Special value lines
 			rehashed[poke][p[1]] = p[2];
-			if (seq == 0) seq = -1;
 		} else {
+			if (seq < 0) seq = 0; // begin filling learnset
 			// Use sequence to determine which learnset/unite move
 			if (rehashed[poke].learnset[seq] != '')
 				rehashed[poke].learnset[seq]+= "\n";
