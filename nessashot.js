@@ -317,6 +317,13 @@ BoostedProc.EVERY_3RD = new UsageBoostedProc(3);
 BoostedProc.EVERY_4TH = new UsageBoostedProc(4);
 BoostedProc.FIVE_SECONDS = new TimedBoostedProc(5);
 
+function CustomCounter(label, labels, max) {
+	if (arguments.length == 0) return;
+	this.label = label;
+	this.plural = labels;
+	this.max = max;
+}
+
 function PointStore(d, sh, ah, ss, as) {
 	this.damage = (arguments.length > 0 ? d : 0);
 	this.selfHeal = (arguments.length > 1 ? sh : 0);
@@ -367,6 +374,23 @@ function DebuffEffect(dur, flatStats, lvlStats) {
 DebuffEffect.prototype = new StatusEffect();
 DebuffEffect.prototype.constructor = DebuffEffect;
 
+function CustomCounterEffect(chng) {
+	if (arguments.length == 0) return;
+	this.change = chng;
+}
+CustomCounterEffect.prototype = new Effect();
+CustomCounterEffect.prototype.constructor = CustomCounterEffect;
+CustomCounterEffect.ONE = new CustomCounterEffect(1);
+CustomCounterEffect.TWO = new CustomCounterEffect(2);
+CustomCounterEffect.ZERO = new CustomCounterEffect(-10000);
+CustomCounterEffect.prototype.run = function(pkmn, targ) {
+	pkmn.customCounter+= this.change;
+	if (pkmn.customCounter > pkmn.pokemon.counter.max)
+		pkmn.customCounter = pkmn.pokemon.counter.max;
+	else if (pkmn.customCounter < 0)
+		pkmn.customCounter = 0;
+}
+
 function HealthModEffect(pmux, smux, lev, flat) {
 	if (arguments.length == 0) return;
 	this.physMultiplier = pmux;
@@ -376,6 +400,7 @@ function HealthModEffect(pmux, smux, lev, flat) {
 	this.maxHealth = 0;
 	this.missingHealth = 0;
 	this.remainingHealth = 0;
+	this.useCounter = 0;
 }
 HealthModEffect.prototype = new Effect();
 HealthModEffect.prototype.constructor = HealthModEffect;
@@ -391,6 +416,12 @@ HealthModEffect.prototype.setRemainingPerc = function(p) {
 	this.remainingHealth = p;
 	return this;
 }
+HealthModEffect.prototype.useCustomCounter = function(cnt) {
+	if (arguments.length == 0)
+		cnt = 1;
+	this.useCounter = cnt;
+	return this;
+}
 HealthModEffect.prototype.calcPoints = function(pkmn, targ) {
 	var h =	this.physMultiplier * pkmn.stats.attack +
 		this.specMultiplier * pkmn.stats.spattack +
@@ -398,6 +429,12 @@ HealthModEffect.prototype.calcPoints = function(pkmn, targ) {
 		this.baseDamage;
 	if (targ != null)
 		h+= this.calcPerc(targ);
+	if (this.useCounter) {
+		if (typeof(this.useCounter) == 'function')
+			h = this.useCounter(h, pkmn.customCounter);
+		else
+			h = Math.floor(h * this.useCounter*pkmn.customCounter);
+	}
 	return h;
 }
 HealthModEffect.prototype.calcPerc = function(pkmn) {
@@ -794,7 +831,7 @@ function LearnSet(level, upgrade, moves) {
 }
 
 function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
-		 learnset1, learnset2, uniteat, unite, passive) {
+		 learnset1, learnset2, uniteat, unite, passive, counter) {
 	if (arguments.length == 0) return;
 	if (prog.length != 15) {
 		throw("Pokemon " + name + " has " + prog.length +
@@ -814,6 +851,7 @@ function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 			new LearnSet(uniteat, 0, [null, unite]),
 		];
 	this.passive = passive;
+	this.counter = counter;
 	this.hints = 0;
 	if (this.progression[this.progression.length-1].critrate)
 		this.hints|= HINT_CRIT;
@@ -868,7 +906,9 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
 	this.stats = new Stats(this.pokemon.progression[this.level-1]);
 	this.scores = score;
 	this.emblems = emblems;
+	// TODO: These could be moved into the simulation object
 	this.boostedCounter = 0;
+	this.customCounter = 0;
 	this.health = 0;
 	this.maxHealth = 0;
 	this.shielding = 0;

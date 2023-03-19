@@ -370,6 +370,9 @@ function run(args) {
 		print("\t\t" +
 		      (typeof(c.passive) !== 'undefined'
 		       ? c.passive : "Passive.DUMMY") +
+		      ", " +
+		      (typeof(c.counter) !== 'undefined'
+		       ? c.counter : "null") +
 		      "),");
 	}
 
