@@ -391,6 +391,16 @@ CustomCounterEffect.prototype.run = function(pkmn, targ) {
 		pkmn.customCounter = 0;
 }
 
+function BoostedSetEffect() {
+	if (arguments.length == 0) return;
+}
+BoostedSetEffect.prototype = new Effect();
+BoostedSetEffect.prototype.constructor = BoostedSetEffect;
+BoostedSetEffect.SET = new BoostedSetEffect();
+BoostedSetEffect.prototype.run = function(pkmn, targ) {
+	pkmn.pokemon.boostedProc.set(pkmn);
+}
+
 function HealthModEffect(pmux, smux, lev, flat) {
 	if (arguments.length == 0) return;
 	this.physMultiplier = pmux;
@@ -569,7 +579,6 @@ function Move(name, cd, effects) {
 	this.cooldown = cd;
 	// Values not common enough to justify an argument
 	this.storedUses = 1;
-	this.resetsBoosted = false;
 	this.lockout = 0;
 	this.cdx = 0;
 	this.hints = 0;
@@ -611,10 +620,6 @@ Move.prototype.setLockOut = function(lo) {
 }
 Move.prototype.setCoolDownEx = function(cdx) {
 	this.cdx = cdx;
-	return this;
-}
-Move.prototype.setBoost = function() {
-	this.resetsBoosted = true;
 	return this;
 }
 Move.prototype.setHints = function(pkmn) {
