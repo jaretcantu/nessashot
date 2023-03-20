@@ -573,7 +573,7 @@ SelfShieldEffect.prototype.calc = function(pkmn, targ) {
 	return ps;
 }
 
-function Move(name, cd, effects) {
+function BaseMove(name, cd) {
 	if (arguments.length == 0) return;
 	this.name = name;
 	this.cooldown = cd;
@@ -582,6 +582,34 @@ function Move(name, cd, effects) {
 	this.lockout = 0;
 	this.cdx = 0;
 	this.hints = 0;
+}
+BaseMove.prototype.toString = function() {
+	return "Move(" + this.name + ")";
+}
+BaseMove.prototype.getCoolDown = function(pkmn) {
+	var cdr = 1.0 - pkmn.stats.cdr;
+	return this.cooldown*cdr + this.cdx;
+}
+BaseMove.prototype.setStore = function(u) {
+	this.storedUses = u;
+	return this;
+}
+BaseMove.prototype.setLockOut = function(lo) {
+	this.lockout = lo;
+	return this;
+}
+BaseMove.prototype.setCoolDownEx = function(cdx) {
+	this.cdx = cdx;
+	return this;
+}
+BaseMove.prototype.setHints = function(pkmn) { }
+BaseMove.prototype.canCrit = function() {
+	return this.hints & HINT_CRIT;
+}
+
+function Move(name, cd, effects) {
+	if (arguments.length == 0) return;
+	BaseMove.call(this, name, cd);
 	if (!isArray(effects)) {
 		if (isNaN(effects)) {
 			this.effects = [effects];
@@ -603,25 +631,8 @@ function Move(name, cd, effects) {
 		this.effects = effects;
 	}
 }
-Move.prototype.toString = function() {
-	return "Move(" + this.name + ")";
-}
-Move.prototype.getCoolDown = function(pkmn) {
-	var cdr = 1.0 - pkmn.stats.cdr;
-	return this.cooldown*cdr + this.cdx;
-}
-Move.prototype.setStore = function(u) {
-	this.storedUses = u;
-	return this;
-}
-Move.prototype.setLockOut = function(lo) {
-	this.lockout = lo;
-	return this;
-}
-Move.prototype.setCoolDownEx = function(cdx) {
-	this.cdx = cdx;
-	return this;
-}
+Move.prototype = new BaseMove();
+Move.prototype.constructor = Move;
 Move.prototype.setHints = function(pkmn) {
 	for (var e=0; e<this.effects.length; e++)
 		this.hints|= pkmn.moveset[this.effects[e]].getHints();
@@ -631,9 +642,6 @@ Move.prototype.calc = function(pkmn, targ) {
 	for (var e=0; e<this.effects.length; e++)
 		ps.add(pkmn.pokemon.moveset[this.effects[e]].calc(pkmn, targ));
 	return ps;
-}
-Move.prototype.canCrit = function() {
-	return this.hints & HINT_CRIT;
 }
 
 function BaseAttackMove(name, cd, effects) {
