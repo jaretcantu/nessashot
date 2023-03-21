@@ -579,6 +579,7 @@ function BaseMove(name, cd) {
 	this.cooldown = cd;
 	// Values not common enough to justify an argument
 	this.storedUses = 1;
+	this.storedInterval = this.cooldown;
 	this.lockout = 0;
 	this.cdx = 0;
 	this.hints = 0;
@@ -590,8 +591,9 @@ BaseMove.prototype.getCoolDown = function(pkmn) {
 	var cdr = 1.0 - pkmn.stats.cdr;
 	return this.cooldown*cdr + this.cdx;
 }
-BaseMove.prototype.setStore = function(u) {
+BaseMove.prototype.setStore = function(u, i) {
 	this.storedUses = u;
+	this.storedInterval = i;
 	return this;
 }
 BaseMove.prototype.setLockOut = function(lo) {
