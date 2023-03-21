@@ -644,6 +644,64 @@ Move.prototype.calc = function(pkmn, targ) {
 	return ps;
 }
 
+function AlternateMove(name, cd, effects/*...*/) {
+	if (arguments.length == 0) return;
+	BaseMove.call(this, name, cd);
+	if (arguments.length > 3) {
+		this.effects = new Array();
+		for (var a=2; a<arguments.length; a++)
+			this.effects[a-2] = arguments[a];
+	} else {
+		this.effects = effects; // should be an array of arrays
+	}
+}
+AlternateMove.prototype = new BaseMove();
+AlternateMove.prototype.constructor = AlternateMove;
+AlternateMove.prototype.getAlternate = function(pkmn, targ) { return 0; }
+AlternateMove.prototype.setHints = function(pkmn) {
+	// Just mash every alternate effect list together
+	for (var e=0; e<this.effects.length; e++) {
+		var eff = this.effects[e];
+		if (eff == null) continue;
+		for (var i=0; i<eff.length; i++)
+			this.hints|= pkmn.moveset[eff[i]].getHints();
+	}
+}
+AlternateMove.prototype.calc = function(pkmn, targ) {
+	var ps = new PointStore();
+	var eff = this.effects[this.getAlternate(pkmn,targ)];
+	for (var e=0; e<eff.length; e++)
+		ps.add(pkmn.pokemon.moveset[eff[e]].calc(pkmn, targ));
+	return ps;
+}
+
+function LearnAltMove(name, cd, effects/*...*/) {
+	if (arguments.length == 0) return;
+	AlternateMove.apply(this, arguments);
+}
+LearnAltMove.prototype = new AlternateMove();
+LearnAltMove.prototype.constructor = LearnAltMove;
+LearnAltMove.prototype.getAlternate = function(pkmn, targ) {
+	var o = (pkmn.moves[0] == this ? 1 : 0);
+	var otherLS = pkmn.pokemon.learnset[o].moves;
+	var otherMove = pkmn.moves[o];
+	// XXX Assume that no alternates exist for starting moves
+	if (otherMove == otherLS[1])
+		return 0;
+	if (otherMove == otherLS[2]) {
+		if (this.effects[1] == null) return 0;
+		return 1;
+	}
+	if (otherMove == otherLS[3])
+		return 2;
+	if (otherMove == otherLS[4]) {
+		if (this.effects[3] == null) return 2;
+		return 3;
+	}
+	// XXX should be unreachable
+	throw(this + ") Could not find move " + otherMove);
+}
+
 function BaseAttackMove(name, cd, effects) {
 	if (arguments.length == 0) return;
 	Move.apply(this, arguments);
