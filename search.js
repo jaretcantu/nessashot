@@ -40,6 +40,7 @@ Calc.critCalc = function(r, champ, lbl, mv, enemy, param) {
 	var total = ps.getTotal();
 	r[lbl + 'allyheal'] = ps.allyHeal;
 	r[lbl + 'heal'] = ps.allyHeal + ps.selfHeal;
+	r[lbl + 'allyshield'] = ps.allyShield;
 	r[lbl + 'shield'] = ps.allyShield + ps.selfShield;
 	if (!isDefined(param.crit) || !mv.canCrit()) {
 		r[lbl + 'dmg'] = dmg;
@@ -130,11 +131,17 @@ Calc.LIST = {
 		function(r, champ, enemy, p) {
 			// A Pokemon will always learn its first move in slot 0,
 			// regardless of whether it is R or ZR.
-			if (champ.moves.length >= 2)
+			if (champ.moves.length >= 2) {
 				Calc.critCalc(r, champ, 'move2', champ.moves[1],
 					enemy, p);
-			else
+			} else {
 				r.move2 = 0;
+				r.move2dmg = 0;
+				r.move2heal = 0;
+				r.move2allyheal = 0;
+				r.move2shield = 0;
+				r.move2allyshield = 0;
+			}
 		}),
 	"itemdmg": new Calc("itemdmg", [],
 		function(r, champ, enemy, p) {
