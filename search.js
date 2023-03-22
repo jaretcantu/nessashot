@@ -127,6 +127,16 @@ Calc.LIST = {
 			Calc.critCalc(r, champ, 'move1', champ.moves[0],
 				enemy, p);
 		}),
+	"move1ot": new Calc("move1ot", ["move1"],
+		function(r, champ, enemy, p) {
+			var cd = champ.moves[0].getCoolDown(champ);
+			r.move1ot = r.move1 / cd;
+			r.move1dmgot = r.move1dmg / cd;
+			r.move1healot = r.move1heal / cd;
+			r.move1allyhealot = r.move1allyheal / cd;
+			r.move1shieldot = r.move1shield / cd;
+			r.move1allyshieldot = r.move1allyshield / cd;
+		}),
 	"move2": new Calc("move2", [],
 		function(r, champ, enemy, p) {
 			// A Pokemon will always learn its first move in slot 0,
@@ -142,6 +152,17 @@ Calc.LIST = {
 				r.move2shield = 0;
 				r.move2allyshield = 0;
 			}
+		}),
+	"move2ot": new Calc("move2ot", ["move2"],
+		function(r, champ, enemy, p) {
+			var cd = (champ.moves.length >= 2 ?
+					champ.moves[1].getCoolDown(champ) : 1);
+			r.move2ot = r.move2 / cd;
+			r.move2dmgot = r.move2dmg / cd;
+			r.move2healot = r.move2heal / cd;
+			r.move2allyhealot = r.move2allyheal / cd;
+			r.move2shieldot = r.move2shield / cd;
+			r.move2allyshieldot = r.move2allyshield / cd;
 		}),
 	"itemdmg": new Calc("itemdmg", [],
 		function(r, champ, enemy, p) {
