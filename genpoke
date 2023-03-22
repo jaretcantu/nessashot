@@ -348,7 +348,8 @@ function run(args) {
 		      fallback(c.basic,
 			       'new AttackMove("Basic", "Basic")') + ", " +
 		      fallback(c.boosted,
-			       'new AttackMove("Boosted", "Boosted")') + ", " +
+			       'new BoostedAttackMove("Boosted", "Boosted")') +
+		      ', ' +
 		      fallback(c.boostedproc, "BoostedProc.EVERY_3RD") +
 		      funcSub(rfunc,
 			      ", new LearnSet($learnat1, $upgradeat1, ["));

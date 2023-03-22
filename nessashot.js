@@ -737,6 +737,16 @@ AttackMove.prototype.getCoolDown = function(pkmn) {
 	return pkmn.ticksPerBasic() / TICKS_PER_SECOND;
 }
 
+function BoostedAttackMove(name, effects) {
+	if (arguments.length == 0) return;
+	AttackMove.apply(this, arguments);
+}
+BoostedAttackMove.prototype = new AttackMove();
+BoostedAttackMove.prototype.constructor = BoostedAttackMove;
+BoostedAttackMove.prototype.getCoolDown = function(pkmn) {
+	return pkmn.ticksPerBoosted() / TICKS_PER_SECOND;
+}
+
 function FixedAttackMove(name, cd, effects) {
 	if (arguments.length == 0) return;
 	BaseAttackMove.apply(this, arguments);
