@@ -928,6 +928,10 @@ function LearnSet(level, upgrade, moves) {
 	this.upgrade = upgrade;
 	this.moves = moves;
 }
+LearnSet.prototype.toString = function() {
+	return "LearnSet(" + this.level + "->" + this.upgrade + " " +
+			 this.moves + ")";
+}
 
 function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 		 learnset1, learnset2, uniteat, unite, passive, counter) {
