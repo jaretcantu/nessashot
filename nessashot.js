@@ -977,10 +977,14 @@ function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 			if (ls.moves[m] === null) {
 				if (m == 0) continue; // for unite learning
 				ls.moves[m] = ls.moves[m-1];
+			} else {
+				ls.moves[m].setHints(this);
 			}
-			ls.moves[m].setHints(this);
 		}
 	}
+	// Add hints to moves outside of learsets
+	this.basic.setHints(this);
+	this.boosted.setHints(this);
 	// Set non-zero defaults for stats
 	for (l=0; l<this.progression.length; l++) {
 		var p = this.progression[l];
