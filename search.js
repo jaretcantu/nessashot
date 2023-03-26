@@ -60,7 +60,8 @@ Calc.critCalc = function(r, champ, lbl, mv, enemy, param) {
 			r[lbl + sfx] = total + increase;
 			break;
 		default:
-			var increase = dmg * champ.stats.critrate * 
+			var critrate = champ.stats.critrate;
+			var increase = dmg * (critrate>1 ? 1 : critrate) *
 					champ.stats.critdamage;
 			r[lbl + 'dmg' + sfx] = dmg + increase;
 			r[lbl + sfx] = total + increase;
