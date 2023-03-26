@@ -940,7 +940,8 @@ LearnSet.prototype.toString = function() {
 			 this.moves + ")";
 }
 
-function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
+function Pokemon(name, type, range, role, prog, moveset,
+		 basic, boosted, bacond, secondmove,
 		 learnset1, learnset2, uniteat, unite, passive, counter) {
 	if (arguments.length == 0) return;
 	if (prog.length != 15) {
@@ -956,6 +957,7 @@ function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 	this.boosted = boosted;
 	this.boostedProc = bacond;
 	this.moveset = moveset;
+	this.secondMoveLevel = secondmove;
 	this.learnset = [
 			learnset1, learnset2,
 			new LearnSet(uniteat, 0, [null, unite]),
@@ -1034,7 +1036,7 @@ function Champion(poke, level, item1, ilev1, item2, ilev2, item3, ilev3,
 	this.maxHealth = 0;
 	this.shielding = 0;
 	this.moves = [];
-	if (this.level < 3) {
+	if (this.level < this.pokemon.secondMoveLevel) {
 		this.moves.push(this.pokemon.learnset[moveFirst].moves[0]);
 	} else {
 		for (var m=0; m<2; m++) {
