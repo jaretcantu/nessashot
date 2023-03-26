@@ -130,7 +130,19 @@ StatPassive.addStats = function(poke, item, foe) {
 	poke.stats.add(this.statFunc(poke, item, foe));
 }
 
+function AlterStatPassive(proc, stats) {
+	if (arguments.length == 0) return;
+	StatPassive.call(this, Passive.INIT, this.flatAdd);
+	this.stats = new Stats(stats);
+}
+AlterStatPassive.prototype = new StatPassive();
+AlterStatPassive.prototype.constructor = AlterStatPassive;
+AlterStatPassive.prototype.flatAdd = function(poke, item, foe) {
+	return this.stats;
+}
+
 function ScoreScalingPassive(stat) {
+	if (arguments.length == 0) return;
 	StatPassive.call(this, Passive.INIT, this.multiplier);
 	this.stat = stat;
 }
