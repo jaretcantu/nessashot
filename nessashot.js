@@ -50,11 +50,6 @@ function Stats(args) {
 		Stats.call(this, arguments);
 	} else if (isDefined(args.length)) {
 		Stats.call(this); // make sure everything is at least zero'd
-		/* XXX Define non-zero defaults for Pokemon, which aren't known
-		 *     or known to be different as of yet. */
-		this.critdamage = 1; // additional damage when crit
-		this.charge = 1; // there is some per-pokemon rate
-		this.healing = 1;
 		// Array or argument list
 		for (var s=0; s<args.length; s++)
 			this[Stats.LIST[s]] = args[s];
@@ -973,6 +968,13 @@ function Pokemon(name, type, range, role, prog, moveset, basic, boosted, bacond,
 			}
 			ls.moves[m].setHints(this);
 		}
+	}
+	// Set non-zero defaults for stats
+	for (l=0; l<this.progression.length; l++) {
+		var p = this.progression[l];
+		p.critdamage = 1;
+		p.charge = 1; // XXX there is some per-pokemon rate
+		p.healing = 1;
 	}
 }
 Pokemon.prototype.toString = function() {
